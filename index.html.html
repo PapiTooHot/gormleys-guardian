@@ -39,6 +39,14 @@
       border-radius: 8px;
     }
 
+    /* Canvas in Fullscreen */
+    canvas:fullscreen {
+      width: 100%;
+      height: 100%;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
     .screen {
       position: absolute;
       top: 50%;
@@ -140,6 +148,27 @@
       transform: translateY(-2px);
     }
 
+    /* Toggle HUD Button Styling */
+    #toggleHUDButton {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      z-index: 1000; /* Above canvas */
+      background: #555;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      font-size: 14px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: background 0.3s, transform 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    #toggleHUDButton:hover {
+      background: #777;
+      transform: translateY(-2px);
+    }
+
     /* Responsive HUD Styling */
     @media (max-width: 600px) {
       #hud {
@@ -163,6 +192,20 @@
 
       #gameCanvas {
         border-radius: 6px;
+      }
+
+      /* Ensure Canvas Fills Screen on Mobile Fullscreen */
+      canvas:fullscreen {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      /* Adjust Toggle HUD Button for Mobile */
+      #toggleHUDButton {
+        padding: 6px 10px;
+        font-size: 12px;
       }
     }
   </style>
@@ -199,6 +242,9 @@
     <button id="fullscreenButton" class="button">Toggle Full Screen</button> <!-- Existing Fullscreen Button -->
     <button id="muteButton" class="button">Mute</button> <!-- New Mute Button -->
   </div>
+
+  <!-- Toggle HUD Button -->
+  <button id="toggleHUDButton" class="button hidden">Hide HUD</button>
 
   <!-- Canvas Container -->
   <div id="canvasContainer">
@@ -316,6 +362,7 @@
     const quitButton2 = document.getElementById('quitButton2');
     const fullscreenButton = document.getElementById('fullscreenButton'); // Existing Element
     const muteButton = document.getElementById('muteButton'); // New Mute Button
+    const toggleHUDButton = document.getElementById('toggleHUDButton'); // New Toggle HUD Button
 
     // Detect if the user is on a mobile device
     const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -366,7 +413,17 @@
       location.reload();
     });
 
-    // Listen for fullscreen change to update the button text
+    toggleHUDButton.addEventListener('click', () => {
+      if (hud.classList.contains('hidden')) {
+        hud.classList.remove('hidden');
+        toggleHUDButton.textContent = "Hide HUD";
+      } else {
+        hud.classList.add('hidden');
+        toggleHUDButton.textContent = "Show HUD";
+      }
+    });
+
+    // Listen for fullscreen change to update the button text and HUD visibility
     document.addEventListener('fullscreenchange', updateFullscreenButton);
     document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
     document.addEventListener('mozfullscreenchange', updateFullscreenButton);
@@ -408,6 +465,8 @@
       startScreen.classList.add('hidden');
       hud.classList.remove('hidden');
       gameOverScreen.classList.add('hidden');
+      toggleHUDButton.classList.remove('hidden');
+      toggleHUDButton.textContent = "Hide HUD";
       gameRunning = true;
       score = 0;
       level = 1;
@@ -433,9 +492,7 @@
       assets.music.pause();
       assets.deathMusic.loop = true;
       assets.deathMusic.play();
-
-      // Ensure Game Over Screen is visible in fullscreen
-      // No additional action needed as the screen overlays the canvas
+      toggleHUDButton.classList.add('hidden');
     }
 
     function gameLoop() {
@@ -706,8 +763,8 @@
 
     function toggleFullScreen() {
       if (!document.fullscreenElement) {
-        // Enter fullscreen
-        document.documentElement.requestFullscreen().catch(err => {
+        // Enter fullscreen on the canvas
+        canvas.requestFullscreen().catch(err => {
           alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
         });
       } else {
@@ -720,9 +777,11 @@
       if (document.fullscreenElement) {
         fullscreenButton.textContent = "Exit Full Screen";
         fullscreenStartButton.textContent = "Exit Full Screen";
+        hud.classList.add('hidden'); // Hide HUD in fullscreen
       } else {
         fullscreenButton.textContent = "Full Screen";
         fullscreenStartButton.textContent = "Full Screen";
+        hud.classList.remove('hidden'); // Show HUD when exiting fullscreen
       }
     }
 
