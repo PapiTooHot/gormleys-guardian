@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Gormley's Guardian: Battle for the Backyard!</title>
   <style>
-    body {
+    body, html {
       margin: 0;
       padding: 0;
       overflow: hidden;
@@ -15,6 +15,7 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
+      touch-action: none; /* Prevent default touch behaviors */
     }
 
     #canvasContainer {
@@ -465,7 +466,7 @@
       startScreen.classList.add('hidden');
       hud.classList.remove('hidden');
       gameOverScreen.classList.add('hidden');
-      toggleHUDButton.classList.remove('hidden');
+      toggleHUDButton.classList.remove('hidden'); // Show Toggle HUD Button
       toggleHUDButton.textContent = "Hide HUD";
       gameRunning = true;
       score = 0;
@@ -492,7 +493,7 @@
       assets.music.pause();
       assets.deathMusic.loop = true;
       assets.deathMusic.play();
-      toggleHUDButton.classList.add('hidden');
+      toggleHUDButton.classList.add('hidden'); // Hide Toggle HUD Button
     }
 
     function gameLoop() {
@@ -778,10 +779,12 @@
         fullscreenButton.textContent = "Exit Full Screen";
         fullscreenStartButton.textContent = "Exit Full Screen";
         hud.classList.add('hidden'); // Hide HUD in fullscreen
+        toggleHUDButton.classList.add('hidden'); // Hide Toggle HUD Button in fullscreen
       } else {
         fullscreenButton.textContent = "Full Screen";
         fullscreenStartButton.textContent = "Full Screen";
         hud.classList.remove('hidden'); // Show HUD when exiting fullscreen
+        toggleHUDButton.classList.remove('hidden'); // Show Toggle HUD Button when exiting fullscreen
       }
     }
 
