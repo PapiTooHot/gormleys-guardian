@@ -120,6 +120,25 @@
       background: #777;
     }
 
+    /* Toggle Scoreboard Button Styling */
+    #toggleScoreboardButton {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: #555;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: background 0.3s;
+      z-index: 1001; /* Ensures it's above the HUD */
+    }
+    #toggleScoreboardButton:hover {
+      background: #777;
+    }
+
     /* Responsive HUD Styling */
     @media (max-width: 600px) {
       #hud {
@@ -135,7 +154,7 @@
         padding: 6px 10px;
       }
 
-      #fullscreenButton, #fullscreenStartButton, #muteButton {
+      #fullscreenButton, #fullscreenStartButton, #muteButton, #toggleScoreboardButton {
         padding: 6px 10px;
         font-size: 14px;
       }
@@ -158,8 +177,11 @@
     <h1>Gormley's Guardian: Battle for the Backyard!</h1>
     <button id="startButton" class="button">Start Game</button>
     <button id="quitButton" class="button">Quit</button>
-    <button id="fullscreenStartButton" class="button">Toggle Full Screen</button> <!-- New Button -->
+    <button id="fullscreenStartButton" class="button">Toggle Full Screen</button> <!-- Existing Button -->
   </div>
+
+  <!-- Toggle Scoreboard Button -->
+  <button id="toggleScoreboardButton" class="button">Menu</button> <!-- Changed Text to "Menu" -->
 
   <!-- Heads-Up Display (HUD) -->
   <div id="hud" class="hidden">
@@ -266,6 +288,9 @@
     let spawnTimer = 0;
     let spawnInterval = 100;
 
+    // New Variable for Level Progression Threshold
+    let nextLevelScore = 200;
+
     const hud = document.getElementById('hud');
     const scoreDisplay = document.getElementById('scoreDisplay');
     const levelDisplay = document.getElementById('levelDisplay');
@@ -275,13 +300,14 @@
     const enterButton = document.getElementById('enterButton');
     const startScreen = document.getElementById('startScreen');
     const startButton = document.getElementById('startButton');
-    const fullscreenStartButton = document.getElementById('fullscreenStartButton'); // New Element
+    const fullscreenStartButton = document.getElementById('fullscreenStartButton'); // Existing Element
     const gameOverScreen = document.getElementById('gameOverScreen');
     const finalScore = document.getElementById('finalScore');
     const restartButton = document.getElementById('restartButton');
     const quitButton2 = document.getElementById('quitButton2');
     const fullscreenButton = document.getElementById('fullscreenButton'); // Existing Element
     const muteButton = document.getElementById('muteButton'); // New Mute Button
+    const toggleScoreboardButton = document.getElementById('toggleScoreboardButton'); // New Toggle Button
 
     // Detect if the user is on a mobile device
     const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -303,8 +329,15 @@
     startButton.addEventListener('click', startGame);
     // Removed Luna Button Event Listener
     fullscreenButton.addEventListener('click', toggleFullScreen); // Existing Fullscreen Toggle
-    fullscreenStartButton.addEventListener('click', toggleFullScreen); // New Fullscreen Toggle
-    muteButton.addEventListener('click', toggleMute); // New Mute Toggle
+    fullscreenStartButton.addEventListener('click', toggleFullScreen); // Existing Fullscreen Toggle
+    muteButton.addEventListener('click', toggleMute); // Existing Mute Toggle
+
+    // Toggle Scoreboard Button Event Listener
+    toggleScoreboardButton.addEventListener('click', () => {
+      hud.classList.toggle('hidden');
+      // Removed dynamic text change to always display "Menu"
+      // toggleScoreboardButton.textContent = hud.classList.contains('hidden') ? 'Show Scoreboard' : 'Hide Scoreboard';
+    });
 
     canvas.addEventListener('mousedown', onCanvasClick);
 
@@ -384,6 +417,7 @@
       explosions = [];
       spawnTimer = 0;
       spawnInterval = 100;
+      nextLevelScore = 200; // Reset level progression threshold
       updateHUD();
       assets.music.loop = true;
       assets.music.play();
@@ -422,7 +456,7 @@
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;
         spawnUFO();
-        maybeSpawnCannedGood();
+        maybeSpawnCannedGood(); // This is where cans are spawned
       }
 
       requestAnimationFrame(gameLoop);
@@ -536,10 +570,10 @@
         const gregWidth = 80;
         const gregHeight = 100;
 
+        const lunaWidth = 40; // Half size
+        const lunaHeight = 50; // Half size
         const lunaX = gregX + gregWidth + 10; // Position Luna next to Greg
-        const lunaY = gregY;
-        const lunaWidth = 80; // Adjust based on your Luna image size
-        const lunaHeight = 100;
+        const lunaY = gregY + gregHeight - lunaHeight; // Align bottoms
 
         if (adjustedX >= lunaX && adjustedX <= lunaX + lunaWidth &&
             adjustedY >= lunaY && adjustedY <= lunaY + lunaHeight) {
@@ -561,9 +595,11 @@
             spawnExplosion(ufo.x, ufo.y, ufo.width > 40 ? "large" : "small");
             ufos.splice(i, 1);
 
-            if (score % 100 === 0) {
+            // Level progression check
+            if (score >= nextLevelScore) {
               level++;
               spawnInterval = Math.max(20, 100 - level * 5);
+              nextLevelScore += 200; // Set next threshold
             }
           }
           updateHUD();
@@ -606,10 +642,10 @@
 
       // Draw Luna next to Greg if ready
       if (lunaReady) {
+        const lunaWidth = 40; // Half size
+        const lunaHeight = 50; // Half size
         const lunaX = gregX + gregWidth + 10; // Position Luna next to Greg
-        const lunaY = gregY;
-        const lunaWidth = 80; // Adjust based on your Luna image size
-        const lunaHeight = 100;
+        const lunaY = gregY + gregHeight - lunaHeight; // Align bottoms
 
         ctx.drawImage(assets.lunaHowl, lunaX, lunaY, lunaWidth, lunaHeight);
 
@@ -633,7 +669,9 @@
     }
 
     function maybeSpawnCannedGood() {
-      if (Math.random() < 0.2) {
+      // Original spawn chance: 0.2 (20%)
+      // Increased by 50% to 0.3 (30%)
+      if (Math.random() < 0.3) { // <-- Changed from 0.2 to 0.3
         cannedGoods.push({
           x: Math.random() * (W - 20),
           y: -20,
