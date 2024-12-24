@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Added Meta Tag -->
   <title>Gormley's Guardian: Battle for the Backyard!</title>
   <style>
     body {
@@ -21,9 +20,6 @@
     #gameCanvas {
       background: #222;
       display: block;
-      width: 100%; /* Make canvas take full width of its container */
-      height: auto; /* Maintain aspect ratio */
-      max-width: 800px; /* Limit maximum size */
       /* Removed the red border */
       /* border: 2px solid #d30c0c; */
     }
@@ -32,10 +28,8 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 100%; /* Full width */
-      height: 100%; /* Full height */
-      max-width: 800px; /* Match canvas max-width */
-      max-height: 600px; /* Match canvas max-height */
+      width: 800px; /* Fixed width */
+      height: 600px; /* Fixed height */
       transform: translate(-50%, -50%);
       display: flex;
       justify-content: center;
@@ -45,36 +39,22 @@
       z-index: 999;
       text-align: center;
       box-sizing: border-box;
-      padding: 20px; /* Optional: Add padding for better layout on small screens */
     }
     .hidden {
       display: none !important;
     }
 
     .button {
-      margin: 12px;
-      padding: 16px 24px;
+      margin: 8px;
+      padding: 12px 20px;
       background: #555;
       border: none;
       cursor: pointer;
       color: #fff;
-      font-size: 18px;
-      border-radius: 8px; /* Optional: Rounded corners */
+      font-size: 16px;
     }
     .button:hover {
       background: #777;
-    }
-
-    @media (max-width: 480px) {
-      .button {
-        font-size: 16px;
-        padding: 14px 20px;
-      }
-
-      #hud {
-        flex-direction: column;
-        gap: 12px;
-      }
     }
 
     #hud {
@@ -103,6 +83,20 @@
       width: 40px;
       height: auto;
     }
+    
+    /* Optional: Style for the fullscreen button */
+    #fullscreenButton {
+      background: #555;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 4px;
+    }
+    #fullscreenButton:hover {
+      background: #777;
+    }
   </style>
 </head>
 <body>
@@ -124,9 +118,11 @@
     <button id="lunaButton" class="hidden">
       <img src="LunaHowl.png" alt="Luna Button">
     </button>
+    <!-- Fullscreen Button Added Here -->
+    <button id="fullscreenButton" class="button">Full Screen</button>
   </div>
 
-  <canvas id="gameCanvas"></canvas> <!-- Removed fixed width and height -->
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
 
   <div id="gameOverScreen" class="screen hidden" style="background-image: url('gameover.png');">
     <h2>Game Over</h2>
@@ -169,33 +165,18 @@
 
     function loadAssets() {
       for (const [key, src] of Object.entries(assetSources)) {
-        if (["music", "howlSound", "explosionSound", "introMusic", "deathMusic"].includes(key)) {
+        if (key === "music" || key === "howlSound" || key === "explosionSound" || key === "introMusic" || key === "deathMusic") {
           assets[key] = new Audio(src);
-          assets[key].addEventListener('canplaythrough', () => {
-            assetsLoaded++;
-            checkAllAssetsLoaded();
-          }, false);
-          assets[key].addEventListener('error', (e) => {
-            console.error(`Error loading audio asset: ${src}`, e);
-          });
         } else {
           assets[key] = new Image();
           assets[key].src = src;
           assets[key].onload = () => {
             assetsLoaded++;
-            checkAllAssetsLoaded();
-          };
-          assets[key].onerror = () => {
-            console.error(`Error loading image asset: ${src}`);
+            if (assetsLoaded === totalAssets - 5) { // Adjusted to account for audio files
+              document.getElementById("enterButton").disabled = false;
+            }
           };
         }
-      }
-    }
-
-    function checkAllAssetsLoaded() {
-      if (assetsLoaded === totalAssets) {
-        document.getElementById("enterButton").disabled = false;
-        console.log("All assets loaded successfully.");
       }
     }
 
@@ -203,30 +184,8 @@
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const W = 800; // Original width
-    const H = 600; // Original height
-
-    // Resize Canvas Function
-    function resizeCanvas() {
-      const aspectRatio = W / H;
-      let newWidth = window.innerWidth;
-      let newHeight = window.innerHeight;
-
-      if (newWidth / newHeight > aspectRatio) {
-        newWidth = newHeight * aspectRatio;
-      } else {
-        newHeight = newWidth / aspectRatio;
-      }
-
-      canvas.style.width = `${newWidth}px`;
-      canvas.style.height = `${newHeight}px`;
-    }
-
-    // Call resizeCanvas on window resize and load
-    window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('load', () => {
-      resizeCanvas();
-    });
+    const W = canvas.width;
+    const H = canvas.height;
 
     let gameRunning = false;
     let score = 0;
@@ -253,47 +212,43 @@
     const finalScore = document.getElementById('finalScore');
     const restartButton = document.getElementById('restartButton');
     const quitButton2 = document.getElementById('quitButton2');
+    const fullscreenButton = document.getElementById('fullscreenButton'); // Added
 
     enterButton.addEventListener('click', () => {
-      if (assets.introMusic) {
-        assets.introMusic.loop = true;
-        assets.introMusic.play().catch(error => {
-          console.error("Error playing introMusic:", error);
-        });
-      }
+      assets.introMusic.loop = true;
+      assets.introMusic.play();
       enterScreen.classList.add('hidden');
       startScreen.classList.remove('hidden');
     });
 
     startButton.addEventListener('click', startGame);
     lunaButton.addEventListener('click', handleLunaHowl);
+    fullscreenButton.addEventListener('click', toggleFullScreen); // Added
 
-    // Handle both touch and mouse inputs
+    canvas.addEventListener('mousedown', onCanvasClick);
+
+    // Also add touch event for mobile
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault(); // Prevent default touch actions
-      if (!gameRunning) return;
       const touch = e.touches[0];
       const rect = canvas.getBoundingClientRect();
-      const touchX = (touch.clientX - rect.left) * (W / rect.width);
-      const touchY = (touch.clientY - rect.top) * (H / rect.height);
+      const touchX = touch.clientX - rect.left;
+      const touchY = touch.clientY - rect.top;
       handleInput(touchX, touchY);
-    }, { passive: false });
+    });
 
     canvas.addEventListener('mousedown', (e) => {
-      if (!gameRunning) return;
       const rect = canvas.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left) * (W / rect.width);
-      const mouseY = (e.clientY - rect.top) * (H / rect.height);
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
       handleInput(mouseX, mouseY);
     });
 
     restartButton.addEventListener('click', () => {
       // Stop the death music if it's playing
-      if (assets.deathMusic) {
-        assets.deathMusic.pause();
-        assets.deathMusic.currentTime = 0;
-      }
-
+      assets.deathMusic.pause();
+      assets.deathMusic.currentTime = 0;
+      
       gameOverScreen.classList.add('hidden');
       startGame();
     });
@@ -303,10 +258,14 @@
       location.reload();
     });
 
+    // Listen for fullscreen change to update the button text
+    document.addEventListener('fullscreenchange', updateFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+    document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+    document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+
     function startGame() {
-      if (assets.introMusic) {
-        assets.introMusic.pause();
-      }
+      assets.introMusic.pause();
       startScreen.classList.add('hidden');
       hud.classList.remove('hidden');
       gameOverScreen.classList.add('hidden');
@@ -321,12 +280,8 @@
       spawnTimer = 0;
       spawnInterval = 100;
       updateHUD();
-      if (assets.music) {
-        assets.music.loop = true;
-        assets.music.play().catch(error => {
-          console.error("Error playing music:", error);
-        });
-      }
+      assets.music.loop = true;
+      assets.music.play();
       requestAnimationFrame(gameLoop);
     }
 
@@ -335,24 +290,16 @@
       hud.classList.add('hidden');
       gameOverScreen.classList.remove('hidden');
       finalScore.textContent = score;
-      if (assets.music) {
-        assets.music.pause();
-      }
-      if (assets.deathMusic) {
-        assets.deathMusic.loop = true;
-        assets.deathMusic.play().catch(error => {
-          console.error("Error playing deathMusic:", error);
-        });
-      }
+      assets.music.pause();
+      assets.deathMusic.loop = true;
+      assets.deathMusic.play();
     }
 
     function gameLoop() {
       if (!gameRunning) return;
 
       ctx.clearRect(0, 0, W, H);
-      if (assets.gameplayBackground) {
-        ctx.drawImage(assets.gameplayBackground, 0, 0, W, H);
-      }
+      ctx.drawImage(assets.gameplayBackground, 0, 0, W, H);
 
       updateUFOs();
       updateCannedGoods();
@@ -416,11 +363,7 @@
                        ufo.health > 3 ? assets.ufoLarge :
                        ufo.health > 1 ? assets.ufoMedium :
                        assets.ufoSmall;
-        if (sprite) {
-          ctx.drawImage(sprite, ufo.x, ufo.y, ufo.width, ufo.height);
-        } else {
-          console.warn(`Sprite not found for UFO type: ${ufo.type}`);
-        }
+        ctx.drawImage(sprite, ufo.x, ufo.y, ufo.width, ufo.height);
       });
     }
 
@@ -436,12 +379,8 @@
         frameDelay: 5,
         frameTimer: 0,
       });
-      if (assets.explosionSound) {
-        assets.explosionSound.currentTime = 0;
-        assets.explosionSound.play().catch(error => {
-          console.error("Error playing explosionSound:", error);
-        });
-      }
+      assets.explosionSound.currentTime = 0;
+      assets.explosionSound.play();
     }
 
     function updateExplosions() {
@@ -461,11 +400,7 @@
     function drawExplosions() {
       explosions.forEach(explosion => {
         const frame = explosion.frames[explosion.currentFrame];
-        if (frame) {
-          ctx.drawImage(frame, explosion.x - 20, explosion.y - 20, 40, 40);
-        } else {
-          console.warn("Explosion frame not found.");
-        }
+        ctx.drawImage(frame, explosion.x - 20, explosion.y - 20, 40, 40);
       });
     }
 
@@ -509,18 +444,14 @@
 
     function onCanvasClick(e) {
       const rect = canvas.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left) * (W / rect.width);
-      const mouseY = (e.clientY - rect.top) * (H / rect.height);
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
 
       handleInput(mouseX, mouseY);
     }
 
     function drawGreg() {
-      if (assets.gregStand) {
-        ctx.drawImage(assets.gregStand, W / 2 - 100, H - 100, 80, 100);
-      } else {
-        console.warn("gregStand image not loaded.");
-      }
+      ctx.drawImage(assets.gregStand, W / 2 - 100, H - 100, 80, 100);
     }
 
     function updateCannedGoods() {
@@ -533,11 +464,7 @@
 
     function drawCannedGoods() {
       cannedGoods.forEach(can => {
-        if (assets.cannedGood) {
-          ctx.drawImage(assets.cannedGood, can.x, can.y, can.width, can.height);
-        } else {
-          console.warn("cannedGood image not loaded.");
-        }
+        ctx.drawImage(assets.cannedGood, can.x, can.y, can.width, can.height);
       });
     }
 
@@ -556,17 +483,9 @@
     function handleLunaHowl() {
       if (!lunaReady) return;
 
-      if (assets.howlSound) {
-        assets.howlSound.play().catch(error => {
-          console.error("Error playing howlSound:", error);
-        });
-      }
+      assets.howlSound.play();
       ctx.clearRect(0, 0, W, H);
-      if (assets.lunaHowl) {
-        ctx.drawImage(assets.lunaHowl, 0, 0, W, H);
-      } else {
-        console.warn("LunaHowl image not loaded.");
-      }
+      ctx.drawImage(assets.lunaHowl, 0, 0, W, H);
 
       setTimeout(() => {
         ufos = [];
@@ -581,6 +500,28 @@
       levelDisplay.textContent = level;
       cansDisplay.textContent = `${cansCollected}/${cansNeededForLuna}`;
       lunaButton.classList.toggle('hidden', !lunaReady);
+    }
+
+    // Fullscreen Functions Added Below
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        // Enter fullscreen
+        document.documentElement.requestFullscreen().catch(err => {
+          alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        });
+      } else {
+        // Exit fullscreen
+        document.exitFullscreen();
+      }
+    }
+
+    function updateFullscreenButton() {
+      if (document.fullscreenElement) {
+        fullscreenButton.textContent = "Exit Full Screen";
+      } else {
+        fullscreenButton.textContent = "Full Screen";
+      }
     }
   </script>
 </body>
