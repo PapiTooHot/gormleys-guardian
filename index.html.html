@@ -120,46 +120,6 @@
       background: #777;
     }
 
-    /* Toggle Scoreboard Button Styling */
-    #toggleScoreboardButton {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background: #555;
-      border: none;
-      cursor: pointer;
-      color: #fff;
-      font-size: 16px;
-      padding: 8px 12px;
-      border-radius: 4px;
-      transition: background 0.3s;
-      z-index: 1001; /* Ensures it's above the HUD */
-    }
-    #toggleScoreboardButton:hover {
-      background: #777;
-    }
-
-    /* Difficulty Selection Styling */
-    .difficulty-container {
-      margin: 20px 0;
-      text-align: center;
-    }
-
-    .difficulty-container p {
-      margin-bottom: 10px;
-      font-size: 18px;
-    }
-
-    .difficulty-container label {
-      margin: 0 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    .difficulty-container input {
-      margin-right: 5px;
-    }
-
     /* Responsive HUD Styling */
     @media (max-width: 600px) {
       #hud {
@@ -175,7 +135,7 @@
         padding: 6px 10px;
       }
 
-      #fullscreenButton, #fullscreenStartButton, #muteButton, #toggleScoreboardButton {
+      #fullscreenButton, #fullscreenStartButton, #muteButton {
         padding: 6px 10px;
         font-size: 14px;
       }
@@ -190,34 +150,16 @@
   <!-- Enter Screen -->
   <div id="enterScreen" class="screen">
     <h1>Welcome to Gormley's Guardian: Battle for the Backyard!</h1>
-    <button id="enterButton" class="button">Enter</button> <!-- Removed 'disabled' for testing -->
+    <button id="enterButton" class="button">Enter</button>
   </div>
 
   <!-- Start Screen -->
   <div id="startScreen" class="screen hidden" style="background-image: url('backgroundstart.png'); background-size: cover;">
     <h1>Gormley's Guardian: Battle for the Backyard!</h1>
-    
-    <!-- Difficulty Selection -->
-    <div id="difficultySelection" class="difficulty-container">
-      <p>Select Difficulty:</p>
-      <label>
-        <input type="radio" name="difficulty" value="easy" /> Easy
-      </label>
-      <label>
-        <input type="radio" name="difficulty" value="medium" checked /> Medium
-      </label>
-      <label>
-        <input type="radio" name="difficulty" value="hard" /> Hard
-      </label>
-    </div>
-    
     <button id="startButton" class="button">Start Game</button>
     <button id="quitButton" class="button">Quit</button>
-    <button id="fullscreenStartButton" class="button">Toggle Full Screen</button> <!-- Existing Button -->
+    <button id="fullscreenStartButton" class="button">Toggle Full Screen</button> <!-- New Button -->
   </div>
-
-  <!-- Toggle Scoreboard Button -->
-  <button id="toggleScoreboardButton" class="button">Menu</button> <!-- Changed Text to "Menu" -->
 
   <!-- Heads-Up Display (HUD) -->
   <div id="hud" class="hidden">
@@ -286,14 +228,9 @@
           assets[key].src = src;
           assets[key].onload = () => {
             assetsLoaded++;
-            console.log(`Loaded asset: ${key}`);
             if (assetsLoaded === totalAssets - 6) { // Excluding audio files
-              console.log('All image assets loaded.');
               document.getElementById("enterButton").disabled = false;
             }
-          };
-          assets[key].onerror = () => {
-            console.error(`Failed to load asset: ${key}`);
           };
         }
       }
@@ -327,45 +264,7 @@
     let cannedGoods = [];
     let explosions = [];
     let spawnTimer = 0;
-    let currentSpawnInterval = 100; // Initialize with default value
-
-    // Define Game States
-    const GAME_STATES = {
-      PLAYING: 'playing',
-      LUNA_HOWL: 'lunaHowl',
-      GAME_OVER: 'gameOver'
-    };
-
-    let currentGameState = GAME_STATES.PLAYING;
-
-    // Define Difficulty Settings
-    const difficultySettings = {
-      easy: {
-        cannedGoodSpawnChance: 0.2, // Decreased spawn chance
-        ufoSpawnInterval: 150,      // Slower spawn interval
-        ufoSpeedMultiplier: 0.8,    // UFOs move 20% slower
-        levelThresholdMultiplier: 0.75 // Levels progress at 75% of hard
-      },
-      medium: {
-        cannedGoodSpawnChance: 0.25, // Between easy and hard
-        ufoSpawnInterval: 100,        // Default spawn interval
-        ufoSpeedMultiplier: 1,        // Default speed
-        levelThresholdMultiplier: 1    // Default level progression
-      },
-      hard: {
-        cannedGoodSpawnChance: 0.3, // Baseline (hard)
-        ufoSpawnInterval: 80,       // Faster spawn interval
-        ufoSpeedMultiplier: 1.2,    // UFOs move 20% faster
-        levelThresholdMultiplier: 1.25 // Levels progress at 125% of medium
-      }
-    };
-
-    // Current Difficulty Setting (Default to 'hard')
-    let currentDifficulty = 'hard';
-
-    // Variables adjusted by difficulty
-    let ufoSpeedMultiplier = difficultySettings[currentDifficulty].ufoSpeedMultiplier;
-    let nextLevelScore = Math.floor(200 * difficultySettings[currentDifficulty].levelThresholdMultiplier);
+    let spawnInterval = 100;
 
     const hud = document.getElementById('hud');
     const scoreDisplay = document.getElementById('scoreDisplay');
@@ -376,27 +275,25 @@
     const enterButton = document.getElementById('enterButton');
     const startScreen = document.getElementById('startScreen');
     const startButton = document.getElementById('startButton');
-    const fullscreenStartButton = document.getElementById('fullscreenStartButton'); // Existing Element
+    const fullscreenStartButton = document.getElementById('fullscreenStartButton'); // New Element
     const gameOverScreen = document.getElementById('gameOverScreen');
     const finalScore = document.getElementById('finalScore');
     const restartButton = document.getElementById('restartButton');
     const quitButton2 = document.getElementById('quitButton2');
     const fullscreenButton = document.getElementById('fullscreenButton'); // Existing Element
     const muteButton = document.getElementById('muteButton'); // New Mute Button
-    const toggleScoreboardButton = document.getElementById('toggleScoreboardButton'); // New Toggle Button
 
     // Detect if the user is on a mobile device
     const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     // Define speed multiplier based on device type
-    const deviceSpeedMultiplier = isMobile ? 0.6 : 1; // UFOs fall 40% slower on mobile
+    const speedMultiplier = isMobile ? 0.6 : 1; // UFOs fall 40% slower on mobile
 
     // Mute State
     let isMuted = false;
 
     // Event Listeners
     enterButton.addEventListener('click', () => {
-      console.log('Enter button clicked.');
       assets.introMusic.loop = true;
       assets.introMusic.play();
       enterScreen.classList.add('hidden');
@@ -406,16 +303,8 @@
     startButton.addEventListener('click', startGame);
     // Removed Luna Button Event Listener
     fullscreenButton.addEventListener('click', toggleFullScreen); // Existing Fullscreen Toggle
-    fullscreenStartButton.addEventListener('click', toggleFullScreen); // Existing Fullscreen Toggle
-    muteButton.addEventListener('click', toggleMute); // Existing Mute Toggle
-
-    // Toggle Scoreboard Button Event Listener
-    toggleScoreboardButton.addEventListener('click', () => {
-      console.log('Menu button clicked.');
-      hud.classList.toggle('hidden');
-      // Removed dynamic text change to always display "Menu"
-      // toggleScoreboardButton.textContent = hud.classList.contains('hidden') ? 'Show Scoreboard' : 'Hide Scoreboard';
-    });
+    fullscreenStartButton.addEventListener('click', toggleFullScreen); // New Fullscreen Toggle
+    muteButton.addEventListener('click', toggleMute); // New Mute Toggle
 
     canvas.addEventListener('mousedown', onCanvasClick);
 
@@ -430,7 +319,6 @@
     });
 
     restartButton.addEventListener('click', () => {
-      console.log('Restart button clicked.');
       // Stop the death music if it's playing
       assets.deathMusic.pause();
       assets.deathMusic.currentTime = 0;
@@ -440,7 +328,6 @@
     });
 
     quitButton2.addEventListener('click', () => {
-      console.log('Quit button clicked.');
       alert("Thanks for playing!");
       location.reload();
     });
@@ -483,21 +370,10 @@
     document.addEventListener('MSFullscreenChange', resizeCanvas);
 
     function startGame() {
-      // Capture selected difficulty
-      const difficultyRadios = document.getElementsByName('difficulty');
-      for (const radio of difficultyRadios) {
-        if (radio.checked) {
-          currentDifficulty = radio.value;
-          break;
-        }
-      }
-      console.log(`Game starting with difficulty: ${currentDifficulty}`);
-
       assets.introMusic.pause();
       startScreen.classList.add('hidden');
       hud.classList.remove('hidden');
       gameOverScreen.classList.add('hidden');
-      currentGameState = GAME_STATES.PLAYING;
       gameRunning = true;
       score = 0;
       level = 1;
@@ -507,15 +383,7 @@
       cannedGoods = [];
       explosions = [];
       spawnTimer = 0;
-      
-      // Apply difficulty settings
-      const settings = difficultySettings[currentDifficulty];
-      currentSpawnInterval = settings.ufoSpawnInterval;
-      ufoSpeedMultiplier = settings.ufoSpeedMultiplier;
-      nextLevelScore = Math.floor(200 * settings.levelThresholdMultiplier);
-      
-      console.log(`Applied settings: spawnInterval=${currentSpawnInterval}, ufoSpeedMultiplier=${ufoSpeedMultiplier}, nextLevelScore=${nextLevelScore}`);
-
+      spawnInterval = 100;
       updateHUD();
       assets.music.loop = true;
       assets.music.play();
@@ -523,8 +391,6 @@
     }
 
     function gameOver() {
-      console.log('Game Over.');
-      currentGameState = GAME_STATES.GAME_OVER;
       gameRunning = false;
       hud.classList.add('hidden');
       gameOverScreen.classList.remove('hidden');
@@ -538,25 +404,25 @@
     }
 
     function gameLoop() {
-      if (currentGameState === GAME_STATES.PLAYING) {
-        ctx.clearRect(0, 0, W, H);
-        ctx.drawImage(assets.gameplayBackground, 0, 0, W, H);
+      if (!gameRunning) return;
 
-        updateUFOs();
-        updateCannedGoods();
-        updateExplosions();
+      ctx.clearRect(0, 0, W, H);
+      ctx.drawImage(assets.gameplayBackground, 0, 0, W, H);
 
-        drawUFOs();
-        drawCannedGoods();
-        drawExplosions();
-        drawGreg();
+      updateUFOs();
+      updateCannedGoods();
+      updateExplosions();
 
-        spawnTimer++;
-        if (spawnTimer >= currentSpawnInterval) { // Use currentSpawnInterval based on difficulty
-          spawnTimer = 0;
-          spawnUFO();
-          maybeSpawnCannedGood(); // This is where cans are spawned
-        }
+      drawUFOs();
+      drawCannedGoods();
+      drawExplosions();
+      drawGreg();
+
+      spawnTimer++;
+      if (spawnTimer >= spawnInterval) {
+        spawnTimer = 0;
+        spawnUFO();
+        maybeSpawnCannedGood();
       }
 
       requestAnimationFrame(gameLoop);
@@ -567,7 +433,7 @@
         ufos.push({
           x: Math.random() * (W - 100),
           y: -100,
-          speed: 0.5 * deviceSpeedMultiplier * ufoSpeedMultiplier, // Apply speed multipliers
+          speed: 0.5 * speedMultiplier, // Apply speed multiplier
           health: 5,
           width: 100,
           height: 100,
@@ -580,13 +446,13 @@
 
         if (health > 3) {
           // Large UFO falls 20% slower than medium
-          speed = baseSpeed * 0.64 * deviceSpeedMultiplier * ufoSpeedMultiplier; // 0.8 * 0.8 = 0.64
+          speed = baseSpeed * 0.64 * speedMultiplier; // 0.8 * 0.8 = 0.64
         } else if (health > 1) {
           // Medium UFO falls 20% slower than small
-          speed = baseSpeed * 0.8 * deviceSpeedMultiplier * ufoSpeedMultiplier;
+          speed = baseSpeed * 0.8 * speedMultiplier;
         } else {
           // Small UFO falls at base speed
-          speed = baseSpeed * deviceSpeedMultiplier * ufoSpeedMultiplier;
+          speed = baseSpeed * speedMultiplier;
         }
 
         ufos.push({
@@ -605,7 +471,6 @@
         let ufo = ufos[i];
         ufo.y += ufo.speed;
         if (ufo.y > H) {
-          console.log('UFO reached bottom. Triggering game over.');
           gameOver();
           return;
         }
@@ -634,16 +499,8 @@
         frameDelay: 5,
         frameTimer: 0,
       });
-      if (!isMuted && assets.explosionSound) {
-        try {
-          assets.explosionSound.currentTime = 0;
-          assets.explosionSound.play();
-          console.log('Explosion sound played.');
-        } catch (error) {
-          console.error('Error playing explosion sound:', error);
-        }
-      }
-      console.log(`Explosion spawned at (${x}, ${y}) with size ${size}.`);
+      assets.explosionSound.currentTime = 0;
+      assets.explosionSound.play();
     }
 
     function updateExplosions() {
@@ -655,7 +512,6 @@
           explosion.currentFrame++;
           if (explosion.currentFrame >= explosion.frames.length) {
             explosions.splice(i, 1);
-            console.log('Explosion animation completed and removed.');
           }
         }
       }
@@ -669,8 +525,6 @@
     }
 
     function handleInput(x, y) {
-      console.log(`handleInput called with coordinates (${x}, ${y}).`);
-      
       // Adjust the input coordinates based on the scale
       const adjustedX = x / scaleX;
       const adjustedY = y / scaleY;
@@ -682,14 +536,13 @@
         const gregWidth = 80;
         const gregHeight = 100;
 
-        const lunaWidth = 40; // Half size
-        const lunaHeight = 50; // Half size
         const lunaX = gregX + gregWidth + 10; // Position Luna next to Greg
-        const lunaY = gregY + gregHeight - lunaHeight; // Align bottoms
+        const lunaY = gregY;
+        const lunaWidth = 80; // Adjust based on your Luna image size
+        const lunaHeight = 100;
 
         if (adjustedX >= lunaX && adjustedX <= lunaX + lunaWidth &&
             adjustedY >= lunaY && adjustedY <= lunaY + lunaHeight) {
-          console.log('Luna clicked.');
           handleLunaHowl();
           return;
         }
@@ -700,7 +553,6 @@
         let ufo = ufos[i];
         if (adjustedX >= ufo.x && adjustedX <= ufo.x + ufo.width &&
             adjustedY >= ufo.y && adjustedY <= ufo.y + ufo.height) {
-          console.log('UFO clicked.');
           ufo.health--;
           if (ufo.health <= 0) {
             score += ufo.type === "mothership" ? 100 :
@@ -709,12 +561,9 @@
             spawnExplosion(ufo.x, ufo.y, ufo.width > 40 ? "large" : "small");
             ufos.splice(i, 1);
 
-            // Level progression check
-            if (score >= nextLevelScore) {
+            if (score % 100 === 0) {
               level++;
-              currentSpawnInterval = Math.max(20, 100 - level * 5);
-              nextLevelScore += Math.floor(200 * difficultySettings[currentDifficulty].levelThresholdMultiplier); // Set next threshold
-              console.log(`Level up! New level: ${level}, Next Level Score: ${nextLevelScore}`);
+              spawnInterval = Math.max(20, 100 - level * 5);
             }
           }
           updateHUD();
@@ -727,12 +576,10 @@
         let can = cannedGoods[i];
         if (adjustedX >= can.x && adjustedX <= can.x + can.width &&
             adjustedY >= can.y && adjustedY <= can.y + can.height) {
-          console.log('Canned Good clicked.');
           cansCollected++;
           if (cansCollected >= cansNeededForLuna) {
             lunaReady = true;
             playBarkSound(); // Play bark sound when Luna is acquired
-            console.log('Luna is now ready.');
           }
           cannedGoods.splice(i, 1);
           updateHUD();
@@ -756,21 +603,18 @@
       const gregHeight = 100;
 
       ctx.drawImage(assets.gregStand, gregX, gregY, gregWidth, gregHeight);
-      console.log('Greg drawn on canvas.');
 
       // Draw Luna next to Greg if ready
       if (lunaReady) {
-        const lunaWidth = 40; // Half size
-        const lunaHeight = 50; // Half size
         const lunaX = gregX + gregWidth + 10; // Position Luna next to Greg
-        const lunaY = gregY + gregHeight - lunaHeight; // Align bottoms
+        const lunaY = gregY;
+        const lunaWidth = 80; // Adjust based on your Luna image size
+        const lunaHeight = 100;
 
-        try {
-          ctx.drawImage(assets.lunaHowl, lunaX, lunaY, lunaWidth, lunaHeight);
-          console.log('Luna drawn next to Greg.');
-        } catch (error) {
-          console.error('Error drawing Luna next to Greg:', error);
-        }
+        ctx.drawImage(assets.lunaHowl, lunaX, lunaY, lunaWidth, lunaHeight);
+
+        // Optionally, add a visual indicator (e.g., a highlight) when hovering over Luna
+        // This requires additional event handling for mouse movement
       }
     }
 
@@ -778,27 +622,18 @@
       for (let i = cannedGoods.length - 1; i >= 0; i--) {
         let can = cannedGoods[i];
         can.y += can.speed;
-        if (can.y > H) {
-          cannedGoods.splice(i, 1);
-          console.log('Canned Good removed (out of bounds).');
-        }
+        if (can.y > H) cannedGoods.splice(i, 1);
       }
     }
 
     function drawCannedGoods() {
       cannedGoods.forEach(can => {
-        try {
-          ctx.drawImage(assets.cannedGood, can.x, can.y, can.width, can.height);
-        } catch (error) {
-          console.error('Error drawing Canned Good:', error);
-        }
+        ctx.drawImage(assets.cannedGood, can.x, can.y, can.width, can.height);
       });
     }
 
     function maybeSpawnCannedGood() {
-      // Use the current difficulty's spawn chance
-      const spawnChance = difficultySettings[currentDifficulty].cannedGoodSpawnChance;
-      if (Math.random() < spawnChance) { // Dynamic spawn chance based on difficulty
+      if (Math.random() < 0.2) {
         cannedGoods.push({
           x: Math.random() * (W - 20),
           y: -20,
@@ -806,48 +641,21 @@
           width: 20,
           height: 20,
         });
-        console.log('Canned Good spawned.');
       }
     }
 
     function handleLunaHowl() {
-      console.log('handleLunaHowl called.');
-      
-      if (!lunaReady) {
-        console.log('Luna is not ready.');
-        return;
-      }
+      if (!lunaReady) return;
 
-      if (!isMuted && assets.howlSound) {
-        try {
-          assets.howlSound.currentTime = 0;
-          assets.howlSound.play();
-          console.log('Luna howl sound played.');
-        } catch (error) {
-          console.error('Error playing howl sound:', error);
-        }
-      }
-
-      try {
-        ctx.clearRect(0, 0, W, H);
-        ctx.drawImage(assets.lunaHowl, 0, 0, W, H);
-        console.log('Luna image drawn on canvas.');
-      } catch (error) {
-        console.error('Error drawing Luna image:', error);
-      }
-
-      // Change game state to LUNA_HOWL
-      currentGameState = GAME_STATES.LUNA_HOWL;
-      console.log('Game state changed to LUNA_HOWL.');
+      assets.howlSound.play();
+      ctx.clearRect(0, 0, W, H);
+      ctx.drawImage(assets.lunaHowl, 0, 0, W, H);
 
       setTimeout(() => {
-        console.log('Resuming game after Luna howl.');
         ufos = [];
         cansCollected = 0;
         lunaReady = false;
         updateHUD();
-        currentGameState = GAME_STATES.PLAYING; // Resume normal gameplay
-        console.log('Game state changed to PLAYING.');
       }, 1000);
     }
 
@@ -856,7 +664,6 @@
       levelDisplay.textContent = level;
       cansDisplay.textContent = `${cansCollected}/${cansNeededForLuna}`;
       // Removed Luna Button visibility toggle
-      console.log('HUD updated.');
     }
 
     // Fullscreen Functions
@@ -866,7 +673,6 @@
         // Enter fullscreen
         document.documentElement.requestFullscreen().catch(err => {
           alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-          console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
         });
       } else {
         // Exit fullscreen
@@ -882,7 +688,6 @@
         fullscreenButton.textContent = "Full Screen";
         fullscreenStartButton.textContent = "Full Screen";
       }
-      console.log('Fullscreen button text updated.');
     }
 
     // Mute Functions
@@ -907,20 +712,14 @@
 
       // Update button text based on mute state
       muteButton.textContent = isMuted ? "Unmute" : "Mute";
-      console.log(`Mute toggled. Now muted: ${isMuted}`);
     }
 
     // Function to play bark sound when Luna is acquired
     function playBarkSound() {
       if (isMuted) return; // Do not play if muted
       if (assets.barkSound) {
-        try {
-          assets.barkSound.currentTime = 0;
-          assets.barkSound.play();
-          console.log('Bark sound played.');
-        } catch (error) {
-          console.error('Error playing bark sound:', error);
-        }
+        assets.barkSound.currentTime = 0;
+        assets.barkSound.play();
       }
     }
   </script>
