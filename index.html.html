@@ -17,11 +17,24 @@
       height: 100vh;
     }
 
+    #canvasContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #333;
+    }
+
     #gameCanvas {
       background: #222;
-      display: block;
-      /* Removed the red border */
-      /* border: 2px solid #d30c0c; */
+      max-width: 100%;
+      max-height: 100%;
+      width: 100%;
+      height: auto;
     }
 
     .screen {
@@ -29,14 +42,14 @@
       top: 50%;
       left: 50%;
       width: 800px; /* Fixed width */
-      height: 600px; /* Fixed height */
+      height: 450px; /* Adjusted to 16:9 ratio */
       transform: translate(-50%, -50%);
       display: flex;
       justify-content: center;
       align-items: center;
       flex-direction: column;
       background-size: cover;
-      z-index: 999;
+      z-index: 1000; /* Ensures it overlays everything */
       text-align: center;
       box-sizing: border-box;
     }
@@ -52,6 +65,8 @@
       cursor: pointer;
       color: #fff;
       font-size: 16px;
+      border-radius: 4px;
+      transition: background 0.3s;
     }
     .button:hover {
       background: #777;
@@ -65,7 +80,7 @@
       display: flex;
       gap: 20px;
       font-size: 18px;
-      z-index: 998;
+      z-index: 999; /* Below screens but above canvas */
     }
     .hud-item {
       background: rgba(0,0,0,0.4);
@@ -83,9 +98,9 @@
       width: 40px;
       height: auto;
     }
-    
-    /* Optional: Style for the fullscreen button */
-    #fullscreenButton {
+
+    /* Fullscreen Button Styling */
+    #fullscreenButton, #fullscreenStartButton {
       background: #555;
       border: none;
       cursor: pointer;
@@ -93,24 +108,29 @@
       font-size: 16px;
       padding: 8px 12px;
       border-radius: 4px;
+      transition: background 0.3s;
     }
-    #fullscreenButton:hover {
+    #fullscreenButton:hover, #fullscreenStartButton:hover {
       background: #777;
     }
   </style>
 </head>
 <body>
+  <!-- Enter Screen -->
   <div id="enterScreen" class="screen">
     <h1>Welcome to Gormley's Guardian: Battle for the Backyard!</h1>
     <button id="enterButton" class="button">Enter</button>
   </div>
 
-  <div id="startScreen" class="screen hidden" style="background-image: url('backgroundstart.png');">
+  <!-- Start Screen -->
+  <div id="startScreen" class="screen hidden" style="background-image: url('backgroundstart.png'); background-size: cover;">
     <h1>Gormley's Guardian: Battle for the Backyard!</h1>
     <button id="startButton" class="button">Start Game</button>
     <button id="quitButton" class="button">Quit</button>
+    <button id="fullscreenStartButton" class="button">Toggle Full Screen</button> <!-- New Button -->
   </div>
 
+  <!-- Heads-Up Display (HUD) -->
   <div id="hud" class="hidden">
     <div class="hud-item">Score: <span id="scoreDisplay">0</span></div>
     <div class="hud-item">Level: <span id="levelDisplay">1</span></div>
@@ -118,13 +138,16 @@
     <button id="lunaButton" class="hidden">
       <img src="LunaHowl.png" alt="Luna Button">
     </button>
-    <!-- Fullscreen Button Added Here -->
-    <button id="fullscreenButton" class="button">Full Screen</button>
+    <button id="fullscreenButton" class="button">Toggle Full Screen</button> <!-- Existing Fullscreen Button -->
   </div>
 
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <!-- Canvas Container -->
+  <div id="canvasContainer">
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+  </div>
 
-  <div id="gameOverScreen" class="screen hidden" style="background-image: url('gameover.png');">
+  <!-- Game Over Screen -->
+  <div id="gameOverScreen" class="screen hidden" style="background-image: url('gameover.png'); background-size: cover;">
     <h2>Game Over</h2>
     <p>Your Score: <span id="finalScore"></span></p>
     <button id="restartButton" class="button">Restart</button>
@@ -165,14 +188,14 @@
 
     function loadAssets() {
       for (const [key, src] of Object.entries(assetSources)) {
-        if (key === "music" || key === "howlSound" || key === "explosionSound" || key === "introMusic" || key === "deathMusic") {
+        if (["music", "howlSound", "explosionSound", "introMusic", "deathMusic"].includes(key)) {
           assets[key] = new Audio(src);
         } else {
           assets[key] = new Image();
           assets[key].src = src;
           assets[key].onload = () => {
             assetsLoaded++;
-            if (assetsLoaded === totalAssets - 5) { // Adjusted to account for audio files
+            if (assetsLoaded === totalAssets - 5) { // Excluding audio files
               document.getElementById("enterButton").disabled = false;
             }
           };
@@ -182,10 +205,21 @@
 
     loadAssets();
 
+    const canvasContainer = document.getElementById('canvasContainer');
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const W = canvas.width;
-    const H = canvas.height;
+
+    // Define the internal resolution (16:9)
+    const INTERNAL_WIDTH = 800;
+    const INTERNAL_HEIGHT = 450;
+
+    // Scale factors
+    let scaleX = 1;
+    let scaleY = 1;
+
+    // Update W and H to match internal resolution
+    const W = INTERNAL_WIDTH;
+    const H = INTERNAL_HEIGHT;
 
     let gameRunning = false;
     let score = 0;
@@ -208,12 +242,20 @@
     const enterButton = document.getElementById('enterButton');
     const startScreen = document.getElementById('startScreen');
     const startButton = document.getElementById('startButton');
+    const fullscreenStartButton = document.getElementById('fullscreenStartButton'); // New Element
     const gameOverScreen = document.getElementById('gameOverScreen');
     const finalScore = document.getElementById('finalScore');
     const restartButton = document.getElementById('restartButton');
     const quitButton2 = document.getElementById('quitButton2');
-    const fullscreenButton = document.getElementById('fullscreenButton'); // Added
+    const fullscreenButton = document.getElementById('fullscreenButton'); // Existing Element
 
+    // Detect if the user is on a mobile device
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // Define speed multiplier based on device type
+    const speedMultiplier = isMobile ? 0.6 : 1; // UFOs fall 40% slower on mobile
+
+    // Event Listeners
     enterButton.addEventListener('click', () => {
       assets.introMusic.loop = true;
       assets.introMusic.play();
@@ -223,7 +265,8 @@
 
     startButton.addEventListener('click', startGame);
     lunaButton.addEventListener('click', handleLunaHowl);
-    fullscreenButton.addEventListener('click', toggleFullScreen); // Added
+    fullscreenButton.addEventListener('click', toggleFullScreen); // Existing Fullscreen Toggle
+    fullscreenStartButton.addEventListener('click', toggleFullScreen); // New Fullscreen Toggle
 
     canvas.addEventListener('mousedown', onCanvasClick);
 
@@ -235,13 +278,6 @@
       const touchX = touch.clientX - rect.left;
       const touchY = touch.clientY - rect.top;
       handleInput(touchX, touchY);
-    });
-
-    canvas.addEventListener('mousedown', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      handleInput(mouseX, mouseY);
     });
 
     restartButton.addEventListener('click', () => {
@@ -263,6 +299,37 @@
     document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
     document.addEventListener('mozfullscreenchange', updateFullscreenButton);
     document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+
+    // Resize Canvas Function
+    function resizeCanvas() {
+      const containerWidth = canvasContainer.clientWidth;
+      const containerHeight = canvasContainer.clientHeight;
+
+      // Calculate the scaling factor to maintain 16:9
+      const scale = Math.min(containerWidth / INTERNAL_WIDTH, containerHeight / INTERNAL_HEIGHT);
+
+      // Calculate the new canvas size
+      const newWidth = INTERNAL_WIDTH * scale;
+      const newHeight = INTERNAL_HEIGHT * scale;
+
+      // Set the canvas CSS width and height
+      canvas.style.width = `${newWidth}px`;
+      canvas.style.height = `${newHeight}px`;
+
+      // Update scale factors
+      scaleX = newWidth / INTERNAL_WIDTH;
+      scaleY = newHeight / INTERNAL_HEIGHT;
+    }
+
+    // Initial resize
+    resizeCanvas();
+
+    // Resize canvas on window resize or fullscreen change
+    window.addEventListener('resize', resizeCanvas);
+    document.addEventListener('fullscreenchange', resizeCanvas);
+    document.addEventListener('webkitfullscreenchange', resizeCanvas);
+    document.addEventListener('mozfullscreenchange', resizeCanvas);
+    document.addEventListener('MSFullscreenChange', resizeCanvas);
 
     function startGame() {
       assets.introMusic.pause();
@@ -293,6 +360,9 @@
       assets.music.pause();
       assets.deathMusic.loop = true;
       assets.deathMusic.play();
+
+      // Ensure Game Over Screen is visible in fullscreen
+      // No additional action needed as the screen overlays the canvas
     }
 
     function gameLoop() {
@@ -325,7 +395,7 @@
         ufos.push({
           x: Math.random() * (W - 100),
           y: -100,
-          speed: 0.5,
+          speed: 0.5 * speedMultiplier, // Apply speed multiplier
           health: 10,
           width: 100,
           height: 100,
@@ -334,11 +404,23 @@
       } else {
         let baseSpeed = 1 + (level * 0.2);
         let health = (Math.random() < 0.2) ? 2 + level : 1 + Math.floor(level / 2);
+        let speed;
+
+        if (health > 3) {
+          // Large UFO falls 20% slower than medium
+          speed = baseSpeed * 0.64 * speedMultiplier; // 0.8 * 0.8 = 0.64
+        } else if (health > 1) {
+          // Medium UFO falls 20% slower than small
+          speed = baseSpeed * 0.8 * speedMultiplier;
+        } else {
+          // Small UFO falls at base speed
+          speed = baseSpeed * speedMultiplier;
+        }
 
         ufos.push({
           x: Math.random() * (W - 50),
           y: -50,
-          speed: baseSpeed,
+          speed: speed,
           health: health,
           width: 40,
           height: 40,
@@ -405,10 +487,14 @@
     }
 
     function handleInput(x, y) {
+      // Adjust the input coordinates based on the scale
+      const adjustedX = x / scaleX;
+      const adjustedY = y / scaleY;
+
       for (let i = ufos.length - 1; i >= 0; i--) {
         let ufo = ufos[i];
-        if (x >= ufo.x && x <= ufo.x + ufo.width &&
-            y >= ufo.y && y <= ufo.y + ufo.height) {
+        if (adjustedX >= ufo.x && adjustedX <= ufo.x + ufo.width &&
+            adjustedY >= ufo.y && adjustedY <= ufo.y + ufo.height) {
           ufo.health--;
           if (ufo.health <= 0) {
             score += ufo.type === "mothership" ? 100 :
@@ -429,8 +515,8 @@
 
       for (let i = cannedGoods.length - 1; i >= 0; i--) {
         let can = cannedGoods[i];
-        if (x >= can.x && x <= can.x + can.width &&
-            y >= can.y && y <= can.y + can.height) {
+        if (adjustedX >= can.x && adjustedX <= can.x + can.width &&
+            adjustedY >= can.y && adjustedY <= can.y + can.height) {
           cansCollected++;
           if (cansCollected >= cansNeededForLuna) {
             lunaReady = true;
@@ -502,7 +588,7 @@
       lunaButton.classList.toggle('hidden', !lunaReady);
     }
 
-    // Fullscreen Functions Added Below
+    // Fullscreen Functions
 
     function toggleFullScreen() {
       if (!document.fullscreenElement) {
@@ -519,8 +605,10 @@
     function updateFullscreenButton() {
       if (document.fullscreenElement) {
         fullscreenButton.textContent = "Exit Full Screen";
+        fullscreenStartButton.textContent = "Exit Full Screen";
       } else {
         fullscreenButton.textContent = "Full Screen";
+        fullscreenStartButton.textContent = "Full Screen";
       }
     }
   </script>
