@@ -139,27 +139,6 @@
       background: #777;
     }
 
-    /* Difficulty Selection Styling */
-    .difficulty-container {
-      margin: 20px 0;
-      text-align: center;
-    }
-
-    .difficulty-container p {
-      margin-bottom: 10px;
-      font-size: 18px;
-    }
-
-    .difficulty-container label {
-      margin: 0 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    .difficulty-container input {
-      margin-right: 5px;
-    }
-
     /* Responsive HUD Styling */
     @media (max-width: 600px) {
       #hud {
@@ -190,27 +169,12 @@
   <!-- Enter Screen -->
   <div id="enterScreen" class="screen">
     <h1>Welcome to Gormley's Guardian: Battle for the Backyard!</h1>
-    <button id="enterButton" class="button">Enter</button> <!-- Removed 'disabled' for testing -->
+    <button id="enterButton" class="button">Enter</button>
   </div>
 
   <!-- Start Screen -->
   <div id="startScreen" class="screen hidden" style="background-image: url('backgroundstart.png'); background-size: cover;">
     <h1>Gormley's Guardian: Battle for the Backyard!</h1>
-    
-    <!-- Difficulty Selection -->
-    <div id="difficultySelection" class="difficulty-container">
-      <p>Select Difficulty:</p>
-      <label>
-        <input type="radio" name="difficulty" value="easy" /> Easy
-      </label>
-      <label>
-        <input type="radio" name="difficulty" value="medium" checked /> Medium
-      </label>
-      <label>
-        <input type="radio" name="difficulty" value="hard" /> Hard
-      </label>
-    </div>
-    
     <button id="startButton" class="button">Start Game</button>
     <button id="quitButton" class="button">Quit</button>
     <button id="fullscreenStartButton" class="button">Toggle Full Screen</button> <!-- Existing Button -->
@@ -286,14 +250,9 @@
           assets[key].src = src;
           assets[key].onload = () => {
             assetsLoaded++;
-            console.log(`Loaded asset: ${key}`);
             if (assetsLoaded === totalAssets - 6) { // Excluding audio files
-              console.log('All image assets loaded.');
               document.getElementById("enterButton").disabled = false;
             }
-          };
-          assets[key].onerror = () => {
-            console.error(`Failed to load asset: ${key}`);
           };
         }
       }
@@ -329,35 +288,8 @@
     let spawnTimer = 0;
     let spawnInterval = 100;
 
-    // Define Difficulty Settings
-    const difficultySettings = {
-      easy: {
-        cannedGoodSpawnChance: 0.2, // Decreased spawn chance
-        ufoSpawnInterval: 150,      // Slower spawn interval
-        ufoSpeedMultiplier: 0.8,    // UFOs move 20% slower
-        levelThresholdMultiplier: 0.75 // Levels progress at 75% of hard
-      },
-      medium: {
-        cannedGoodSpawnChance: 0.25, // Between easy and hard
-        ufoSpawnInterval: 100,        // Default spawn interval
-        ufoSpeedMultiplier: 1,        // Default speed
-        levelThresholdMultiplier: 1    // Default level progression
-      },
-      hard: {
-        cannedGoodSpawnChance: 0.3, // Baseline (hard)
-        ufoSpawnInterval: 80,       // Faster spawn interval
-        ufoSpeedMultiplier: 1.2,    // UFOs move 20% faster
-        levelThresholdMultiplier: 1.25 // Levels progress at 125% of medium
-      }
-    };
-
-    // Current Difficulty Setting (Default to 'hard')
-    let currentDifficulty = 'hard';
-
-    // Variables adjusted by difficulty
-    let ufoSpeedMultiplier = difficultySettings[currentDifficulty].ufoSpeedMultiplier;
-    let currentSpawnInterval = difficultySettings[currentDifficulty].ufoSpawnInterval;
-    let nextLevelScore = Math.floor(200 * difficultySettings[currentDifficulty].levelThresholdMultiplier);
+    // New Variable for Level Progression Threshold
+    let nextLevelScore = 200;
 
     const hud = document.getElementById('hud');
     const scoreDisplay = document.getElementById('scoreDisplay');
@@ -381,14 +313,13 @@
     const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     // Define speed multiplier based on device type
-    const deviceSpeedMultiplier = isMobile ? 0.6 : 1; // UFOs fall 40% slower on mobile
+    const speedMultiplier = isMobile ? 0.6 : 1; // UFOs fall 40% slower on mobile
 
     // Mute State
     let isMuted = false;
 
     // Event Listeners
     enterButton.addEventListener('click', () => {
-      console.log('Enter button clicked.');
       assets.introMusic.loop = true;
       assets.introMusic.play();
       enterScreen.classList.add('hidden');
@@ -403,7 +334,6 @@
 
     // Toggle Scoreboard Button Event Listener
     toggleScoreboardButton.addEventListener('click', () => {
-      console.log('Menu button clicked.');
       hud.classList.toggle('hidden');
       // Removed dynamic text change to always display "Menu"
       // toggleScoreboardButton.textContent = hud.classList.contains('hidden') ? 'Show Scoreboard' : 'Hide Scoreboard';
@@ -422,7 +352,6 @@
     });
 
     restartButton.addEventListener('click', () => {
-      console.log('Restart button clicked.');
       // Stop the death music if it's playing
       assets.deathMusic.pause();
       assets.deathMusic.currentTime = 0;
@@ -432,7 +361,6 @@
     });
 
     quitButton2.addEventListener('click', () => {
-      console.log('Quit button clicked.');
       alert("Thanks for playing!");
       location.reload();
     });
@@ -475,16 +403,6 @@
     document.addEventListener('MSFullscreenChange', resizeCanvas);
 
     function startGame() {
-      // Capture selected difficulty
-      const difficultyRadios = document.getElementsByName('difficulty');
-      for (const radio of difficultyRadios) {
-        if (radio.checked) {
-          currentDifficulty = radio.value;
-          break;
-        }
-      }
-      console.log(`Game starting with difficulty: ${currentDifficulty}`);
-
       assets.introMusic.pause();
       startScreen.classList.add('hidden');
       hud.classList.remove('hidden');
@@ -498,15 +416,8 @@
       cannedGoods = [];
       explosions = [];
       spawnTimer = 0;
-      
-      // Apply difficulty settings
-      const settings = difficultySettings[currentDifficulty];
-      currentSpawnInterval = settings.ufoSpawnInterval;
-      ufoSpeedMultiplier = settings.ufoSpeedMultiplier;
-      nextLevelScore = Math.floor(200 * settings.levelThresholdMultiplier);
-      
-      console.log(`Applied settings: spawnInterval=${currentSpawnInterval}, ufoSpeedMultiplier=${ufoSpeedMultiplier}, nextLevelScore=${nextLevelScore}`);
-
+      spawnInterval = 100;
+      nextLevelScore = 200; // Reset level progression threshold
       updateHUD();
       assets.music.loop = true;
       assets.music.play();
@@ -514,7 +425,6 @@
     }
 
     function gameOver() {
-      console.log('Game Over.');
       gameRunning = false;
       hud.classList.add('hidden');
       gameOverScreen.classList.remove('hidden');
@@ -543,7 +453,7 @@
       drawGreg();
 
       spawnTimer++;
-      if (spawnTimer >= currentSpawnInterval) { // Use currentSpawnInterval based on difficulty
+      if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;
         spawnUFO();
         maybeSpawnCannedGood(); // This is where cans are spawned
@@ -557,7 +467,7 @@
         ufos.push({
           x: Math.random() * (W - 100),
           y: -100,
-          speed: 0.5 * deviceSpeedMultiplier * ufoSpeedMultiplier, // Apply speed multipliers
+          speed: 0.5 * speedMultiplier, // Apply speed multiplier
           health: 5,
           width: 100,
           height: 100,
@@ -570,13 +480,13 @@
 
         if (health > 3) {
           // Large UFO falls 20% slower than medium
-          speed = baseSpeed * 0.64 * deviceSpeedMultiplier * ufoSpeedMultiplier; // 0.8 * 0.8 = 0.64
+          speed = baseSpeed * 0.64 * speedMultiplier; // 0.8 * 0.8 = 0.64
         } else if (health > 1) {
           // Medium UFO falls 20% slower than small
-          speed = baseSpeed * 0.8 * deviceSpeedMultiplier * ufoSpeedMultiplier;
+          speed = baseSpeed * 0.8 * speedMultiplier;
         } else {
           // Small UFO falls at base speed
-          speed = baseSpeed * deviceSpeedMultiplier * ufoSpeedMultiplier;
+          speed = baseSpeed * speedMultiplier;
         }
 
         ufos.push({
@@ -595,7 +505,6 @@
         let ufo = ufos[i];
         ufo.y += ufo.speed;
         if (ufo.y > H) {
-          console.log('UFO reached bottom. Triggering game over.');
           gameOver();
           return;
         }
@@ -624,10 +533,8 @@
         frameDelay: 5,
         frameTimer: 0,
       });
-      if (!isMuted && assets.explosionSound) {
-        assets.explosionSound.currentTime = 0;
-        assets.explosionSound.play();
-      }
+      assets.explosionSound.currentTime = 0;
+      assets.explosionSound.play();
     }
 
     function updateExplosions() {
@@ -670,7 +577,6 @@
 
         if (adjustedX >= lunaX && adjustedX <= lunaX + lunaWidth &&
             adjustedY >= lunaY && adjustedY <= lunaY + lunaHeight) {
-          console.log('Luna clicked.');
           handleLunaHowl();
           return;
         }
@@ -681,7 +587,6 @@
         let ufo = ufos[i];
         if (adjustedX >= ufo.x && adjustedX <= ufo.x + ufo.width &&
             adjustedY >= ufo.y && adjustedY <= ufo.y + ufo.height) {
-          console.log('UFO clicked.');
           ufo.health--;
           if (ufo.health <= 0) {
             score += ufo.type === "mothership" ? 100 :
@@ -694,8 +599,7 @@
             if (score >= nextLevelScore) {
               level++;
               spawnInterval = Math.max(20, 100 - level * 5);
-              nextLevelScore += Math.floor(200 * difficultySettings[currentDifficulty].levelThresholdMultiplier); // Set next threshold
-              console.log(`Level up! New level: ${level}, Next Level Score: ${nextLevelScore}`);
+              nextLevelScore += 200; // Set next threshold
             }
           }
           updateHUD();
@@ -708,12 +612,10 @@
         let can = cannedGoods[i];
         if (adjustedX >= can.x && adjustedX <= can.x + can.width &&
             adjustedY >= can.y && adjustedY <= can.y + can.height) {
-          console.log('Canned Good clicked.');
           cansCollected++;
           if (cansCollected >= cansNeededForLuna) {
             lunaReady = true;
             playBarkSound(); // Play bark sound when Luna is acquired
-            console.log('Luna is now ready.');
           }
           cannedGoods.splice(i, 1);
           updateHUD();
@@ -756,10 +658,7 @@
       for (let i = cannedGoods.length - 1; i >= 0; i--) {
         let can = cannedGoods[i];
         can.y += can.speed;
-        if (can.y > H) {
-          cannedGoods.splice(i, 1);
-          console.log('Canned Good removed (out of bounds).');
-        }
+        if (can.y > H) cannedGoods.splice(i, 1);
       }
     }
 
@@ -770,9 +669,9 @@
     }
 
     function maybeSpawnCannedGood() {
-      // Use the current difficulty's spawn chance
-      const spawnChance = difficultySettings[currentDifficulty].cannedGoodSpawnChance;
-      if (Math.random() < spawnChance) { // Dynamic spawn chance based on difficulty
+      // Original spawn chance: 0.2 (20%)
+      // Increased by 50% to 0.3 (30%)
+      if (Math.random() < 0.3) { // <-- Changed from 0.2 to 0.3
         cannedGoods.push({
           x: Math.random() * (W - 20),
           y: -20,
@@ -780,17 +679,13 @@
           width: 20,
           height: 20,
         });
-        console.log('Canned Good spawned.');
       }
     }
 
     function handleLunaHowl() {
       if (!lunaReady) return;
 
-      if (!isMuted && assets.howlSound) {
-        assets.howlSound.play();
-        console.log('Luna howl sound played.');
-      }
+      assets.howlSound.play();
       ctx.clearRect(0, 0, W, H);
       ctx.drawImage(assets.lunaHowl, 0, 0, W, H);
 
@@ -799,7 +694,6 @@
         cansCollected = 0;
         lunaReady = false;
         updateHUD();
-        console.log('Luna howl completed.');
       }, 1000);
     }
 
@@ -856,7 +750,6 @@
 
       // Update button text based on mute state
       muteButton.textContent = isMuted ? "Unmute" : "Mute";
-      console.log(`Mute toggled. Now muted: ${isMuted}`);
     }
 
     // Function to play bark sound when Luna is acquired
@@ -865,7 +758,6 @@
       if (assets.barkSound) {
         assets.barkSound.currentTime = 0;
         assets.barkSound.play();
-        console.log('Bark sound played.');
       }
     }
   </script>
