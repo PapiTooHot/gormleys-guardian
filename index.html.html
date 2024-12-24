@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gormley's Guardian: Battle for the Backyard!</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #333;
+      font-family: Arial, sans-serif;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #gameCanvas {
+      background: #222;
+      display: block;
+      /* Removed the red border */
+      /* border: 2px solid #d30c0c; */
+    }
+
+    .screen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 800px; /* Fixed width */
+      height: 600px; /* Fixed height */
+      transform: translate(-50%, -50%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      background-size: cover;
+      z-index: 999;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    .button {
+      margin: 8px;
+      padding: 12px 20px;
+      background: #555;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      font-size: 16px;
+    }
+    .button:hover {
+      background: #777;
+    }
+
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 20px;
+      font-size: 18px;
+      z-index: 998;
+    }
+    .hud-item {
+      background: rgba(0,0,0,0.4);
+      padding: 8px 12px;
+      border-radius: 4px;
+    }
+
+    #lunaButton {
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    #lunaButton img {
+      width: 40px;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="enterScreen" class="screen">
+    <h1>Welcome to Gormley's Guardian: Battle for the Backyard!</h1>
+    <button id="enterButton" class="button">Enter</button>
+  </div>
+
+  <div id="startScreen" class="screen hidden" style="background-image: url('backgroundstart.png');">
+    <h1>Gormley's Guardian: Battle for the Backyard!</h1>
+    <button id="startButton" class="button">Start Game</button>
+    <button id="quitButton" class="button">Quit</button>
+  </div>
+
+  <div id="hud" class="hidden">
+    <div class="hud-item">Score: <span id="scoreDisplay">0</span></div>
+    <div class="hud-item">Level: <span id="levelDisplay">1</span></div>
+    <div class="hud-item">Cans: <span id="cansDisplay">0</span>/<span id="cansNeeded">5</span></div>
+    <button id="lunaButton" class="hidden">
+      <img src="LunaHowl.png" alt="Luna Button">
+    </button>
+  </div>
+
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <div id="gameOverScreen" class="screen hidden" style="background-image: url('gameover.png');">
+    <h2>Game Over</h2>
+    <p>Your Score: <span id="finalScore"></span></p>
+    <button id="restartButton" class="button">Restart</button>
+    <button id="quitButton2" class="button">Quit</button>
+  </div>
+
+  <script>
+    const assetSources = {
+      ufoTriangle: "UFOTriangle.png",
+      ufoSmall: "UFOSmall.png",
+      ufoMedium: "UFOMedium.png",
+      ufoLarge: "UFOLarge.png",
+      ufoDroneSmall: "UFODroneSmall.png",
+      ufoDroneLarge: "UFODroneLarge.png",
+      mothership: "Mothership.png",
+      cannedGood: "CannedGood.png",
+      blaster: "Blaster.png",
+      lunaHowl: "LunaHowl.png",
+      gameplayBackground: "Gameplaybackground.png",
+      explosionA1: "ExplosionA1.png",
+      explosionA2: "ExplosionA2.png",
+      explosionA3: "ExplosionA3.png",
+      explosionB1: "ExplosionB1.png",
+      explosionB2: "ExplosionB2.png",
+      explosionB3: "ExplosionB3.png",
+      gregStand: "GregGunHoldRight.png",
+      music: "music.mp3",
+      howlSound: "howl.mp3",
+      explosionSound: "explosion.mp3",
+      backgroundStart: "backgroundstart.png",
+      introMusic: "intromusic.mp3",
+      deathMusic: "death.mp3"
+    };
+
+    const assets = {};
+    let assetsLoaded = 0;
+    const totalAssets = Object.keys(assetSources).length;
+
+    function loadAssets() {
+      for (const [key, src] of Object.entries(assetSources)) {
+        if (key === "music" || key === "howlSound" || key === "explosionSound" || key === "introMusic" || key === "deathMusic") {
+          assets[key] = new Audio(src);
+        } else {
+          assets[key] = new Image();
+          assets[key].src = src;
+          assets[key].onload = () => {
+            assetsLoaded++;
+            if (assetsLoaded === totalAssets - 5) { // Adjusted to account for audio files
+              document.getElementById("enterButton").disabled = false;
+            }
+          };
+        }
+      }
+    }
+
+    loadAssets();
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    let gameRunning = false;
+    let score = 0;
+    let level = 1;
+    let cansCollected = 0;
+    const cansNeededForLuna = 5;
+    let lunaReady = false;
+    let ufos = [];
+    let cannedGoods = [];
+    let explosions = [];
+    let spawnTimer = 0;
+    let spawnInterval = 100;
+
+    const hud = document.getElementById('hud');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const levelDisplay = document.getElementById('levelDisplay');
+    const cansDisplay = document.getElementById('cansDisplay');
+    const lunaButton = document.getElementById('lunaButton');
+    const enterScreen = document.getElementById('enterScreen');
+    const enterButton = document.getElementById('enterButton');
+    const startScreen = document.getElementById('startScreen');
+    const startButton = document.getElementById('startButton');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const finalScore = document.getElementById('finalScore');
+    const restartButton = document.getElementById('restartButton');
+    const quitButton2 = document.getElementById('quitButton2');
+
+    enterButton.addEventListener('click', () => {
+      assets.introMusic.loop = true;
+      assets.introMusic.play();
+      enterScreen.classList.add('hidden');
+      startScreen.classList.remove('hidden');
+    });
+
+    startButton.addEventListener('click', startGame);
+    lunaButton.addEventListener('click', handleLunaHowl);
+
+    canvas.addEventListener('mousedown', onCanvasClick);
+
+    // Also add touch event for mobile
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // Prevent default touch actions
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const touchX = touch.clientX - rect.left;
+      const touchY = touch.clientY - rect.top;
+      handleInput(touchX, touchY);
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      handleInput(mouseX, mouseY);
+    });
+
+    restartButton.addEventListener('click', () => {
+      // Stop the death music if it's playing
+      assets.deathMusic.pause();
+      assets.deathMusic.currentTime = 0;
+      
+      gameOverScreen.classList.add('hidden');
+      startGame();
+    });
+
+    quitButton2.addEventListener('click', () => {
+      alert("Thanks for playing!");
+      location.reload();
+    });
+
+    function startGame() {
+      assets.introMusic.pause();
+      startScreen.classList.add('hidden');
+      hud.classList.remove('hidden');
+      gameOverScreen.classList.add('hidden');
+      gameRunning = true;
+      score = 0;
+      level = 1;
+      cansCollected = 0;
+      lunaReady = false;
+      ufos = [];
+      cannedGoods = [];
+      explosions = [];
+      spawnTimer = 0;
+      spawnInterval = 100;
+      updateHUD();
+      assets.music.loop = true;
+      assets.music.play();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      hud.classList.add('hidden');
+      gameOverScreen.classList.remove('hidden');
+      finalScore.textContent = score;
+      assets.music.pause();
+      assets.deathMusic.loop = true;
+      assets.deathMusic.play();
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.drawImage(assets.gameplayBackground, 0, 0, W, H);
+
+      updateUFOs();
+      updateCannedGoods();
+      updateExplosions();
+
+      drawUFOs();
+      drawCannedGoods();
+      drawExplosions();
+      drawGreg();
+
+      spawnTimer++;
+      if (spawnTimer >= spawnInterval) {
+        spawnTimer = 0;
+        spawnUFO();
+        maybeSpawnCannedGood();
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function spawnUFO() {
+      if (level >= 10 && Math.random() < 0.1) {
+        ufos.push({
+          x: Math.random() * (W - 100),
+          y: -100,
+          speed: 0.5,
+          health: 10,
+          width: 100,
+          height: 100,
+          type: "mothership"
+        });
+      } else {
+        let baseSpeed = 1 + (level * 0.2);
+        let health = (Math.random() < 0.2) ? 2 + level : 1 + Math.floor(level / 2);
+
+        ufos.push({
+          x: Math.random() * (W - 50),
+          y: -50,
+          speed: baseSpeed,
+          health: health,
+          width: 40,
+          height: 40,
+        });
+      }
+    }
+
+    function updateUFOs() {
+      for (let i = ufos.length - 1; i >= 0; i--) {
+        let ufo = ufos[i];
+        ufo.y += ufo.speed;
+        if (ufo.y > H) {
+          gameOver();
+          return;
+        }
+      }
+    }
+
+    function drawUFOs() {
+      ufos.forEach(ufo => {
+        const sprite = ufo.type === "mothership" ? assets.mothership :
+                       ufo.health > 3 ? assets.ufoLarge :
+                       ufo.health > 1 ? assets.ufoMedium :
+                       assets.ufoSmall;
+        ctx.drawImage(sprite, ufo.x, ufo.y, ufo.width, ufo.height);
+      });
+    }
+
+    function spawnExplosion(x, y, size) {
+      const explosionFrames = size === "large"
+        ? [assets.explosionB1, assets.explosionB2, assets.explosionB3]
+        : [assets.explosionA1, assets.explosionA2, assets.explosionA3];
+      explosions.push({
+        x,
+        y,
+        frames: explosionFrames,
+        currentFrame: 0,
+        frameDelay: 5,
+        frameTimer: 0,
+      });
+      assets.explosionSound.currentTime = 0;
+      assets.explosionSound.play();
+    }
+
+    function updateExplosions() {
+      for (let i = explosions.length - 1; i >= 0; i--) {
+        const explosion = explosions[i];
+        explosion.frameTimer++;
+        if (explosion.frameTimer >= explosion.frameDelay) {
+          explosion.frameTimer = 0;
+          explosion.currentFrame++;
+          if (explosion.currentFrame >= explosion.frames.length) {
+            explosions.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    function drawExplosions() {
+      explosions.forEach(explosion => {
+        const frame = explosion.frames[explosion.currentFrame];
+        ctx.drawImage(frame, explosion.x - 20, explosion.y - 20, 40, 40);
+      });
+    }
+
+    function handleInput(x, y) {
+      for (let i = ufos.length - 1; i >= 0; i--) {
+        let ufo = ufos[i];
+        if (x >= ufo.x && x <= ufo.x + ufo.width &&
+            y >= ufo.y && y <= ufo.y + ufo.height) {
+          ufo.health--;
+          if (ufo.health <= 0) {
+            score += ufo.type === "mothership" ? 100 :
+                     ufo.width > 40 ? 50 :
+                     ufo.width > 20 ? 20 : 10;
+            spawnExplosion(ufo.x, ufo.y, ufo.width > 40 ? "large" : "small");
+            ufos.splice(i, 1);
+
+            if (score % 100 === 0) {
+              level++;
+              spawnInterval = Math.max(20, 100 - level * 5);
+            }
+          }
+          updateHUD();
+          return;
+        }
+      }
+
+      for (let i = cannedGoods.length - 1; i >= 0; i--) {
+        let can = cannedGoods[i];
+        if (x >= can.x && x <= can.x + can.width &&
+            y >= can.y && y <= can.y + can.height) {
+          cansCollected++;
+          if (cansCollected >= cansNeededForLuna) {
+            lunaReady = true;
+          }
+          cannedGoods.splice(i, 1);
+          updateHUD();
+          return;
+        }
+      }
+    }
+
+    function onCanvasClick(e) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      handleInput(mouseX, mouseY);
+    }
+
+    function drawGreg() {
+      ctx.drawImage(assets.gregStand, W / 2 - 100, H - 100, 80, 100);
+    }
+
+    function updateCannedGoods() {
+      for (let i = cannedGoods.length - 1; i >= 0; i--) {
+        let can = cannedGoods[i];
+        can.y += can.speed;
+        if (can.y > H) cannedGoods.splice(i, 1);
+      }
+    }
+
+    function drawCannedGoods() {
+      cannedGoods.forEach(can => {
+        ctx.drawImage(assets.cannedGood, can.x, can.y, can.width, can.height);
+      });
+    }
+
+    function maybeSpawnCannedGood() {
+      if (Math.random() < 0.2) {
+        cannedGoods.push({
+          x: Math.random() * (W - 20),
+          y: -20,
+          speed: 1,
+          width: 20,
+          height: 20,
+        });
+      }
+    }
+
+    function handleLunaHowl() {
+      if (!lunaReady) return;
+
+      assets.howlSound.play();
+      ctx.clearRect(0, 0, W, H);
+      ctx.drawImage(assets.lunaHowl, 0, 0, W, H);
+
+      setTimeout(() => {
+        ufos = [];
+        cansCollected = 0;
+        lunaReady = false;
+        updateHUD();
+      }, 1000);
+    }
+
+    function updateHUD() {
+      scoreDisplay.textContent = score;
+      levelDisplay.textContent = level;
+      cansDisplay.textContent = `${cansCollected}/${cansNeededForLuna}`;
+      lunaButton.classList.toggle('hidden', !lunaReady);
+    }
+  </script>
+</body>
+</html>
