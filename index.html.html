@@ -9,7 +9,7 @@
       padding: 0;
       overflow: hidden;
       background: #333;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: Arial, sans-serif;
       color: #fff;
       display: flex;
       justify-content: center;
@@ -35,8 +35,6 @@
       max-height: 100%;
       width: 100%;
       height: auto;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      border-radius: 8px;
     }
 
     .screen {
@@ -54,9 +52,6 @@
       z-index: 1000; /* Ensures it overlays everything */
       text-align: center;
       box-sizing: border-box;
-      border: 2px solid #fff;
-      border-radius: 10px;
-      background-color: rgba(0, 0, 0, 0.8); /* Added semi-transparent background */
     }
     .hidden {
       display: none !important;
@@ -71,15 +66,12 @@
       color: #fff;
       font-size: 16px;
       border-radius: 4px;
-      transition: background 0.3s, transform 0.2s;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: background 0.3s;
     }
     .button:hover {
       background: #777;
-      transform: translateY(-2px);
     }
 
-    /* HUD Container */
     #hud {
       position: absolute;
       top: 10px;
@@ -89,19 +81,11 @@
       gap: 20px;
       font-size: 18px;
       z-index: 999; /* Below screens but above canvas */
-      background: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
-      padding: 10px 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
     .hud-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .hud-icon {
-      width: 24px;
-      height: 24px;
+      background: rgba(0,0,0,0.4);
+      padding: 8px 12px;
+      border-radius: 4px;
     }
 
     /* Fullscreen Button Styling */
@@ -113,12 +97,10 @@
       font-size: 16px;
       padding: 8px 12px;
       border-radius: 4px;
-      transition: background 0.3s, transform 0.2s;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: background 0.3s;
     }
     #fullscreenButton:hover, #fullscreenStartButton:hover {
       background: #777;
-      transform: translateY(-2px);
     }
 
     /* Mute Button Styling */
@@ -130,14 +112,12 @@
       font-size: 16px;
       padding: 8px 12px;
       border-radius: 4px;
-      transition: background 0.3s, transform 0.2s;
+      transition: background 0.3s;
       display: flex;
       align-items: center;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     #muteButton:hover {
       background: #777;
-      transform: translateY(-2px);
     }
 
     /* Responsive HUD Styling */
@@ -149,11 +129,10 @@
         transform: none;
         gap: 10px;
         font-size: 14px;
-        padding: 8px 12px;
       }
 
       .hud-item {
-        padding: 4px 6px;
+        padding: 6px 10px;
       }
 
       #fullscreenButton, #fullscreenStartButton, #muteButton {
@@ -161,8 +140,8 @@
         font-size: 14px;
       }
 
-      #gameCanvas {
-        border-radius: 6px;
+      #lunaButton img {
+        width: 30px;
       }
     }
   </style>
@@ -184,18 +163,10 @@
 
   <!-- Heads-Up Display (HUD) -->
   <div id="hud" class="hidden">
-    <div class="hud-item">
-      <img src="score_icon.png" alt="Score" class="hud-icon"> <!-- Optional Icon -->
-      Score: <span id="scoreDisplay">0</span>
-    </div>
-    <div class="hud-item">
-      <img src="level_icon.png" alt="Level" class="hud-icon"> <!-- Optional Icon -->
-      Level: <span id="levelDisplay">1</span>
-    </div>
-    <div class="hud-item">
-      <img src="cans_icon.png" alt="Cans" class="hud-icon"> <!-- Optional Icon -->
-      Cans: <span id="cansDisplay">0</span>/<span id="cansNeeded">5</span>
-    </div>
+    <div class="hud-item">Score: <span id="scoreDisplay">0</span></div>
+    <div class="hud-item">Level: <span id="levelDisplay">1</span></div>
+    <div class="hud-item">Cans: <span id="cansDisplay">0</span>/<span id="cansNeeded">5</span></div>
+    <!-- Removed Luna Button from HUD -->
     <button id="fullscreenButton" class="button">Toggle Full Screen</button> <!-- Existing Fullscreen Button -->
     <button id="muteButton" class="button">Mute</button> <!-- New Mute Button -->
   </div>
@@ -239,10 +210,7 @@
       barkSound: "bark.mp3", // New Sound Added
       backgroundStart: "backgroundstart.png",
       introMusic: "intromusic.mp3",
-      deathMusic: "death.mp3",
-      scoreIcon: "score_icon.png", // Optional Icons
-      levelIcon: "level_icon.png",
-      cansIcon: "cans_icon.png"
+      deathMusic: "death.mp3"
       // If you have a separate standing image for Luna, add it here:
       // lunaStanding: "LunaStanding.png",
     };
@@ -297,8 +265,6 @@
     let explosions = [];
     let spawnTimer = 0;
     let spawnInterval = 100;
-
-    let nextLevelScore = 250; // New Variable for Next Level Threshold
 
     const hud = document.getElementById('hud');
     const scoreDisplay = document.getElementById('scoreDisplay');
@@ -412,7 +378,6 @@
       score = 0;
       level = 1;
       cansCollected = 0;
-      nextLevelScore = 250; // Reset to initial value
       lunaReady = false;
       ufos = [];
       cannedGoods = [];
@@ -596,13 +561,9 @@
             spawnExplosion(ufo.x, ufo.y, ufo.width > 40 ? "large" : "small");
             ufos.splice(i, 1);
 
-            // Level up if score has reached or exceeded nextLevelScore
-            if (score >= nextLevelScore) {
-              while (score >= nextLevelScore) { // Handle multiple level-ups
-                level++;
-                spawnInterval = Math.max(20, 100 - level * 5);
-                nextLevelScore += 250; // Set score required for the next level
-              }
+            if (score % 100 === 0) {
+              level++;
+              spawnInterval = Math.max(20, 100 - level * 5);
             }
           }
           updateHUD();
@@ -651,6 +612,9 @@
         const lunaHeight = 100;
 
         ctx.drawImage(assets.lunaHowl, lunaX, lunaY, lunaWidth, lunaHeight);
+
+        // Optionally, add a visual indicator (e.g., a highlight) when hovering over Luna
+        // This requires additional event handling for mouse movement
       }
     }
 
@@ -669,7 +633,7 @@
     }
 
     function maybeSpawnCannedGood() {
-      if (Math.random() < 0.3) { // Increased spawn chance from 0.2 to 0.3 (50% increase)
+      if (Math.random() < 0.2) {
         cannedGoods.push({
           x: Math.random() * (W - 20),
           y: -20,
