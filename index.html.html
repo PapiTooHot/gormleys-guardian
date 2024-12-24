@@ -9,7 +9,7 @@
       padding: 0;
       overflow: hidden;
       background: #333;
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       color: #fff;
       display: flex;
       justify-content: center;
@@ -35,6 +35,8 @@
       max-height: 100%;
       width: 100%;
       height: auto;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      border-radius: 8px;
     }
 
     .screen {
@@ -52,6 +54,9 @@
       z-index: 1000; /* Ensures it overlays everything */
       text-align: center;
       box-sizing: border-box;
+      border: 2px solid #fff;
+      border-radius: 10px;
+      background-color: rgba(0, 0, 0, 0.8); /* Added semi-transparent background */
     }
     .hidden {
       display: none !important;
@@ -66,12 +71,15 @@
       color: #fff;
       font-size: 16px;
       border-radius: 4px;
-      transition: background 0.3s;
+      transition: background 0.3s, transform 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     .button:hover {
       background: #777;
+      transform: translateY(-2px);
     }
 
+    /* HUD Container */
     #hud {
       position: absolute;
       top: 10px;
@@ -81,22 +89,19 @@
       gap: 20px;
       font-size: 18px;
       z-index: 999; /* Below screens but above canvas */
+      background: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+      padding: 10px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
     .hud-item {
-      background: rgba(0,0,0,0.4);
-      padding: 8px 12px;
-      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
-
-    #lunaButton {
-      background: none;
-      border: none;
-      cursor: pointer;
-    }
-
-    #lunaButton img {
-      width: 40px;
-      height: auto;
+    .hud-icon {
+      width: 24px;
+      height: 24px;
     }
 
     /* Fullscreen Button Styling */
@@ -108,10 +113,57 @@
       font-size: 16px;
       padding: 8px 12px;
       border-radius: 4px;
-      transition: background 0.3s;
+      transition: background 0.3s, transform 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     #fullscreenButton:hover, #fullscreenStartButton:hover {
       background: #777;
+      transform: translateY(-2px);
+    }
+
+    /* Mute Button Styling */
+    #muteButton {
+      background: #555;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: background 0.3s, transform 0.2s;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    #muteButton:hover {
+      background: #777;
+      transform: translateY(-2px);
+    }
+
+    /* Responsive HUD Styling */
+    @media (max-width: 600px) {
+      #hud {
+        flex-direction: column;
+        top: 10px;
+        left: 10px;
+        transform: none;
+        gap: 10px;
+        font-size: 14px;
+        padding: 8px 12px;
+      }
+
+      .hud-item {
+        padding: 4px 6px;
+      }
+
+      #fullscreenButton, #fullscreenStartButton, #muteButton {
+        padding: 6px 10px;
+        font-size: 14px;
+      }
+
+      #gameCanvas {
+        border-radius: 6px;
+      }
     }
   </style>
 </head>
@@ -132,13 +184,20 @@
 
   <!-- Heads-Up Display (HUD) -->
   <div id="hud" class="hidden">
-    <div class="hud-item">Score: <span id="scoreDisplay">0</span></div>
-    <div class="hud-item">Level: <span id="levelDisplay">1</span></div>
-    <div class="hud-item">Cans: <span id="cansDisplay">0</span>/<span id="cansNeeded">5</span></div>
-    <button id="lunaButton" class="hidden">
-      <img src="LunaHowl.png" alt="Luna Button">
-    </button>
+    <div class="hud-item">
+      <img src="score_icon.png" alt="Score" class="hud-icon"> <!-- Optional Icon -->
+      Score: <span id="scoreDisplay">0</span>
+    </div>
+    <div class="hud-item">
+      <img src="level_icon.png" alt="Level" class="hud-icon"> <!-- Optional Icon -->
+      Level: <span id="levelDisplay">1</span>
+    </div>
+    <div class="hud-item">
+      <img src="cans_icon.png" alt="Cans" class="hud-icon"> <!-- Optional Icon -->
+      Cans: <span id="cansDisplay">0</span>/<span id="cansNeeded">5</span>
+    </div>
     <button id="fullscreenButton" class="button">Toggle Full Screen</button> <!-- Existing Fullscreen Button -->
+    <button id="muteButton" class="button">Mute</button> <!-- New Mute Button -->
   </div>
 
   <!-- Canvas Container -->
@@ -177,9 +236,15 @@
       music: "music.mp3",
       howlSound: "howl.mp3",
       explosionSound: "explosion.mp3",
+      barkSound: "bark.mp3", // New Sound Added
       backgroundStart: "backgroundstart.png",
       introMusic: "intromusic.mp3",
-      deathMusic: "death.mp3"
+      deathMusic: "death.mp3",
+      scoreIcon: "score_icon.png", // Optional Icons
+      levelIcon: "level_icon.png",
+      cansIcon: "cans_icon.png"
+      // If you have a separate standing image for Luna, add it here:
+      // lunaStanding: "LunaStanding.png",
     };
 
     const assets = {};
@@ -188,14 +253,14 @@
 
     function loadAssets() {
       for (const [key, src] of Object.entries(assetSources)) {
-        if (["music", "howlSound", "explosionSound", "introMusic", "deathMusic"].includes(key)) {
+        if (["music", "howlSound", "explosionSound", "introMusic", "deathMusic", "barkSound"].includes(key)) {
           assets[key] = new Audio(src);
         } else {
           assets[key] = new Image();
           assets[key].src = src;
           assets[key].onload = () => {
             assetsLoaded++;
-            if (assetsLoaded === totalAssets - 5) { // Excluding audio files
+            if (assetsLoaded === totalAssets - 6) { // Excluding audio files
               document.getElementById("enterButton").disabled = false;
             }
           };
@@ -233,11 +298,13 @@
     let spawnTimer = 0;
     let spawnInterval = 100;
 
+    let nextLevelScore = 250; // New Variable for Next Level Threshold
+
     const hud = document.getElementById('hud');
     const scoreDisplay = document.getElementById('scoreDisplay');
     const levelDisplay = document.getElementById('levelDisplay');
     const cansDisplay = document.getElementById('cansDisplay');
-    const lunaButton = document.getElementById('lunaButton');
+    // Removed Luna Button from JavaScript
     const enterScreen = document.getElementById('enterScreen');
     const enterButton = document.getElementById('enterButton');
     const startScreen = document.getElementById('startScreen');
@@ -248,12 +315,16 @@
     const restartButton = document.getElementById('restartButton');
     const quitButton2 = document.getElementById('quitButton2');
     const fullscreenButton = document.getElementById('fullscreenButton'); // Existing Element
+    const muteButton = document.getElementById('muteButton'); // New Mute Button
 
     // Detect if the user is on a mobile device
     const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     // Define speed multiplier based on device type
     const speedMultiplier = isMobile ? 0.6 : 1; // UFOs fall 40% slower on mobile
+
+    // Mute State
+    let isMuted = false;
 
     // Event Listeners
     enterButton.addEventListener('click', () => {
@@ -264,9 +335,10 @@
     });
 
     startButton.addEventListener('click', startGame);
-    lunaButton.addEventListener('click', handleLunaHowl);
+    // Removed Luna Button Event Listener
     fullscreenButton.addEventListener('click', toggleFullScreen); // Existing Fullscreen Toggle
     fullscreenStartButton.addEventListener('click', toggleFullScreen); // New Fullscreen Toggle
+    muteButton.addEventListener('click', toggleMute); // New Mute Toggle
 
     canvas.addEventListener('mousedown', onCanvasClick);
 
@@ -340,6 +412,7 @@
       score = 0;
       level = 1;
       cansCollected = 0;
+      nextLevelScore = 250; // Reset to initial value
       lunaReady = false;
       ufos = [];
       cannedGoods = [];
@@ -391,12 +464,12 @@
     }
 
     function spawnUFO() {
-      if (level >= 10 && Math.random() < 0.1) {
+      if (level >= 5 && Math.random() < 0.1) {
         ufos.push({
           x: Math.random() * (W - 100),
           y: -100,
           speed: 0.5 * speedMultiplier, // Apply speed multiplier
-          health: 10,
+          health: 5,
           width: 100,
           height: 100,
           type: "mothership"
@@ -491,6 +564,26 @@
       const adjustedX = x / scaleX;
       const adjustedY = y / scaleY;
 
+      // Check if Luna is ready and clicked
+      if (lunaReady) {
+        const gregX = W / 2 - 100;
+        const gregY = H - 100;
+        const gregWidth = 80;
+        const gregHeight = 100;
+
+        const lunaX = gregX + gregWidth + 10; // Position Luna next to Greg
+        const lunaY = gregY;
+        const lunaWidth = 80; // Adjust based on your Luna image size
+        const lunaHeight = 100;
+
+        if (adjustedX >= lunaX && adjustedX <= lunaX + lunaWidth &&
+            adjustedY >= lunaY && adjustedY <= lunaY + lunaHeight) {
+          handleLunaHowl();
+          return;
+        }
+      }
+
+      // Check for UFO clicks
       for (let i = ufos.length - 1; i >= 0; i--) {
         let ufo = ufos[i];
         if (adjustedX >= ufo.x && adjustedX <= ufo.x + ufo.width &&
@@ -503,9 +596,13 @@
             spawnExplosion(ufo.x, ufo.y, ufo.width > 40 ? "large" : "small");
             ufos.splice(i, 1);
 
-            if (score % 100 === 0) {
-              level++;
-              spawnInterval = Math.max(20, 100 - level * 5);
+            // Level up if score has reached or exceeded nextLevelScore
+            if (score >= nextLevelScore) {
+              while (score >= nextLevelScore) { // Handle multiple level-ups
+                level++;
+                spawnInterval = Math.max(20, 100 - level * 5);
+                nextLevelScore += 250; // Set score required for the next level
+              }
             }
           }
           updateHUD();
@@ -513,6 +610,7 @@
         }
       }
 
+      // Check for Canned Good clicks
       for (let i = cannedGoods.length - 1; i >= 0; i--) {
         let can = cannedGoods[i];
         if (adjustedX >= can.x && adjustedX <= can.x + can.width &&
@@ -520,6 +618,7 @@
           cansCollected++;
           if (cansCollected >= cansNeededForLuna) {
             lunaReady = true;
+            playBarkSound(); // Play bark sound when Luna is acquired
           }
           cannedGoods.splice(i, 1);
           updateHUD();
@@ -537,7 +636,22 @@
     }
 
     function drawGreg() {
-      ctx.drawImage(assets.gregStand, W / 2 - 100, H - 100, 80, 100);
+      const gregX = W / 2 - 100;
+      const gregY = H - 100;
+      const gregWidth = 80;
+      const gregHeight = 100;
+
+      ctx.drawImage(assets.gregStand, gregX, gregY, gregWidth, gregHeight);
+
+      // Draw Luna next to Greg if ready
+      if (lunaReady) {
+        const lunaX = gregX + gregWidth + 10; // Position Luna next to Greg
+        const lunaY = gregY;
+        const lunaWidth = 80; // Adjust based on your Luna image size
+        const lunaHeight = 100;
+
+        ctx.drawImage(assets.lunaHowl, lunaX, lunaY, lunaWidth, lunaHeight);
+      }
     }
 
     function updateCannedGoods() {
@@ -555,7 +669,7 @@
     }
 
     function maybeSpawnCannedGood() {
-      if (Math.random() < 0.2) {
+      if (Math.random() < 0.3) { // Increased spawn chance from 0.2 to 0.3 (50% increase)
         cannedGoods.push({
           x: Math.random() * (W - 20),
           y: -20,
@@ -585,7 +699,7 @@
       scoreDisplay.textContent = score;
       levelDisplay.textContent = level;
       cansDisplay.textContent = `${cansCollected}/${cansNeededForLuna}`;
-      lunaButton.classList.toggle('hidden', !lunaReady);
+      // Removed Luna Button visibility toggle
     }
 
     // Fullscreen Functions
@@ -609,6 +723,39 @@
       } else {
         fullscreenButton.textContent = "Full Screen";
         fullscreenStartButton.textContent = "Full Screen";
+      }
+    }
+
+    // Mute Functions
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      // List all audio assets to toggle mute
+      const audioElements = [
+        assets.music,
+        assets.introMusic,
+        assets.deathMusic,
+        assets.howlSound,
+        assets.explosionSound,
+        assets.barkSound // Include barkSound in mute functionality
+      ];
+
+      audioElements.forEach(audio => {
+        if (audio) {
+          audio.muted = isMuted;
+        }
+      });
+
+      // Update button text based on mute state
+      muteButton.textContent = isMuted ? "Unmute" : "Mute";
+    }
+
+    // Function to play bark sound when Luna is acquired
+    function playBarkSound() {
+      if (isMuted) return; // Do not play if muted
+      if (assets.barkSound) {
+        assets.barkSound.currentTime = 0;
+        assets.barkSound.play();
       }
     }
   </script>
