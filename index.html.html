@@ -185,12 +185,37 @@
       }
     }
   </style>
+ <script src="alien_quotes.js" defer></script>
 </head>
 <body>
   <!-- Enter Screen -->
   <div id="enterScreen" class="screen">
-    <h1>"Two possibilities exist: either we are alone in the Universe or we are not. Both are equally terrifying"</h1>
-    <button id="enterButton" class="button">Enter</button> <!-- Removed 'disabled' for testing -->
+    <h1 id="quote">"T<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Quote Game</title>
+</head>
+<body>
+  <h1 id="quote"></h1>
+  <script>
+    const quotes = [
+      `"The universe is a pretty big place. If it's just us, it seems like an awful waste of space." - Carl Sagan`,
+      `"If it’s just us… seems like an awful waste of space." - Ellie Arroway (Contact)`,
+      // Add the rest of your quotes here
+    ];
+    function getRandomQuote() {
+      const randomIndex = Math.floor(Math.random() * quotes.length);
+      return quotes[randomIndex];
+    }
+    window.onload = function () {
+      document.getElementById('quote').textContent = getRandomQuote();
+    };
+  </script>
+</body>
+</html><h1 id="quote"></h1>
+    <button id="enterButton" class="button">Survive</button> <!-- Removed 'disabled' for testing -->
   </div>
 
   <!-- Start Screen -->
