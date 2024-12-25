@@ -185,46 +185,25 @@
       }
     }
   </style>
- <script src="alien_quotes.js" defer></script>
+  <script src="./assets/js/alien_quotes.js" defer></script>
 </head>
 <body>
   <!-- Enter Screen -->
   <div id="enterScreen" class="screen">
-    <h1 id="quote">"T<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Random Quote Game</title>
-</head>
-<body>
-  <h1 id="quote"></h1>
-  <script>
-    const quotes = [
-      `"The universe is a pretty big place. If it's just us, it seems like an awful waste of space." - Carl Sagan`,
-      `"If it’s just us… seems like an awful waste of space." - Ellie Arroway (Contact)`,
-      // Add the rest of your quotes here
-    ];
-    function getRandomQuote() {
-      const randomIndex = Math.floor(Math.random() * quotes.length);
-      return quotes[randomIndex];
-    }
-    window.onload = function () {
-      document.getElementById('quote').textContent = getRandomQuote();
-    };
-  </script>
-</body>
-</html><h1 id="quote"></h1>
+    <p id="quote"></p>
     <button id="enterButton" class="button">Survive</button> <!-- Removed 'disabled' for testing -->
   </div>
 
   <!-- Start Screen -->
-  <div id="startScreen" class="screen hidden" style="background-image: url('backgroundstart.png'); background-size: cover;">
+  <div id="startScreen" class="screen hidden" style="background-image: url('./assets/images/backgroundstart.png'); background-size: cover;">
     <h1></h1>
     
     <!-- Difficulty Selection -->
     <div id="difficultySelection" class="difficulty-container">
       <p>Select Difficulty:</p>
+      <label>
+        <input type="radio" name="difficulty" value="baby" /> Baby
+      </label>
       <label>
         <input type="radio" name="difficulty" value="easy" /> Easy
       </label>
@@ -233,6 +212,9 @@
       </label>
       <label>
         <input type="radio" name="difficulty" value="hard" /> Hard
+      </label>
+      <label>
+        <input type="radio" name="difficulty" value="extreme" /> Extreme
       </label>
     </div>
     
@@ -292,7 +274,7 @@
       howlSound: "howl.mp3",
       explosionSound: "explosion.mp3",
       barkSound: "bark.mp3", // New Sound Added
-      backgroundStart: "backgroundstart.png",
+      backgroundStart: "./assets/images/backgroundstart.png",
       introMusic: "intromusic.mp3",
       deathMusic: "death.mp3"
       // If you have a separate standing image for Luna, add it here:
@@ -366,25 +348,38 @@
 
     // Define Difficulty Settings
     const difficultySettings = {
-      easy: {
-        cannedGoodSpawnChance: 0.2, // Decreased spawn chance
-        ufoSpawnInterval: 150,      // Slower spawn interval
-        ufoSpeedMultiplier: 0.8,    // UFOs move 20% slower
-        levelThresholdMultiplier: 0.75 // Levels progress at 75% of hard
-      },
-      medium: {
-        cannedGoodSpawnChance: 0.25, // Between easy and hard
-        ufoSpawnInterval: 100,        // Default spawn interval
-        ufoSpeedMultiplier: 1,        // Default speed
-        levelThresholdMultiplier: 1    // Default level progression
-      },
-      hard: {
-        cannedGoodSpawnChance: 0.3, // Baseline (hard)
-        ufoSpawnInterval: 80,       // Faster spawn interval
-        ufoSpeedMultiplier: 1.2,    // UFOs move 20% faster
-        levelThresholdMultiplier: 1.25 // Levels progress at 125% of medium
-      }
-    };
+  baby: {
+    cannedGoodSpawnChance: 0.16,
+    ufoSpawnInterval: 216,
+    ufoSpeedMultiplier: 0.64,
+    levelThresholdMultiplier: 0.48
+  },
+  easy: {
+    cannedGoodSpawnChance: 0.16,
+    ufoSpawnInterval: 180,
+    ufoSpeedMultiplier: 0.64,
+    levelThresholdMultiplier: 0.6
+  },
+  medium: {
+    cannedGoodSpawnChance: 0.2,
+    ufoSpawnInterval: 150,
+    ufoSpeedMultiplier: 0.8,
+    levelThresholdMultiplier: 0.75
+  },
+  hard: {
+    cannedGoodSpawnChance: 0.24,
+    ufoSpawnInterval: 120,
+    ufoSpeedMultiplier: 0.96,
+    levelThresholdMultiplier: 0.9
+  },
+  extreme: {
+    cannedGoodSpawnChance: 0.29,
+    ufoSpawnInterval: 96,
+    ufoSpeedMultiplier: 1.15,
+    levelThresholdMultiplier: 1.08
+  }
+};
+
 
     // Current Difficulty Setting (Default to 'hard')
     let currentDifficulty = 'hard';
@@ -421,13 +416,24 @@
     let isMuted = false;
 
     // Event Listeners
-    enterButton.addEventListener('click', () => {
-      console.log('Enter button clicked.');
-      assets.introMusic.loop = true;
-      assets.introMusic.play();
-      enterScreen.classList.add('hidden');
-      startScreen.classList.remove('hidden');
-    });
+    enterButton.addEventListener('click', async () => {
+  console.log('Enter button clicked.');
+  assets.introMusic.loop = true;
+  assets.introMusic.play();
+  
+  try {
+    await toggleFullScreen();
+    console.log('Fullscreen activated successfully.');
+  } catch (err) {
+    console.error('Fullscreen activation failed:', err);
+    // Optionally notify the user
+  } finally {
+    // Proceed to hide enterScreen and show startScreen regardless of fullscreen success
+    enterScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+  }
+});
+
 
     startButton.addEventListener('click', startGame);
     // Removed Luna Button Event Listener
@@ -438,7 +444,8 @@
     // Toggle Scoreboard Button Event Listener
     toggleScoreboardButton.addEventListener('click', () => {
       console.log('Menu button clicked.');
-      hud.classList.toggle('hidden');
+       // hud.classList.remove('hidden'); // Remove this line to keep HUD hidden by default
+  hud.classList.add('hidden'); // Ensure HUD is hidden
       // Removed dynamic text change to always display "Menu"
       // toggleScoreboardButton.textContent = hud.classList.contains('hidden') ? 'Show Scoreboard' : 'Hide Scoreboard';
     });
@@ -456,14 +463,29 @@
     });
 
     restartButton.addEventListener('click', () => {
-      console.log('Restart button clicked.');
-      // Stop the death music if it's playing
-      assets.deathMusic.pause();
-      assets.deathMusic.currentTime = 0;
-      
-      gameOverScreen.classList.add('hidden');
-      startGame();
-    });
+  console.log('Restart button clicked.');
+
+  // Stop the death music if it's playing
+  if (assets.deathMusic) {
+    assets.deathMusic.pause();
+    assets.deathMusic.currentTime = 0;
+  }
+
+  // Hide the game over screen
+  gameOverScreen.classList.add('hidden');
+
+  // Set the radio button to reflect the current difficulty
+  const difficultyRadios = document.getElementsByName('difficulty');
+  for (const radio of difficultyRadios) {
+    if (radio.value === currentDifficulty) {
+      radio.checked = true;
+      break;
+    }
+  }
+
+  // Start the game with the current difficulty
+  startGame(currentDifficulty);
+});
 
     quitButton2.addEventListener('click', () => {
       console.log('Quit button clicked.');
